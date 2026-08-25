@@ -1,0 +1,41 @@
+# Production overlay — adds a Cloudflare Tunnel connector so PocketBase and
+# the Socket.io server are reachable over the internet via a stable
+# https://... hostname, without opening any inbound ports on this
+# machine's router/firewall. Local dev (`docker compose up`) never touches
+# this file — it's only loaded when explicitly layered on top of the base
+# docker-compose.yml.
+#
+# Usage: `pnpm docker:prod` (see root package.json), or directly:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# One-time setup, in the Cloudflare Zero Trust dashboard (Networks -> Tunnels):
+#   1. Create a tunnel, copy its token into a repo-root .env file as
+#      TUNNEL_TOKEN=... (see .env.example — docker compose loads .env from
+#      the directory you run it in automatically).
+#   2. Add Public Hostname routes on that tunnel pointing at this compose
+#      network's internal service names/ports, e.g.:
+#        pb.yourdomain.com  ->  http://pocketbase:8090
+#        ws.yourdomain.com  ->  http://server:4001
+#      cloudflared resolves those hostnames via Docker's built-in service
+#      DNS because it joins the same Compose network below — the routing
+#      itself is configured in the Cloudflare dashboard, not in this file.
+#   3. Point apps/desktop/.env.production at the public hostnames
+#      (https://pb.yourdomain.com, https://ws.yourdomain.com) instead of a
+#      LAN address, then rebuild the desktop app — see .env.example there.
+#      A tunnel hostname doesn't change with the mini-PC's local IP, so
+#      this is more durable than the LAN-hostname approach for anyone
+#      outside the LAN.
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN:?Set TUNNEL_TOKEN in a repo-root .env file — see .env.example}
+    depends_on:
+      pocketbase:
+        condition: service_healthy
+      server:
+        condition: service_healthy

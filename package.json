@@ -13,7 +13,9 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "docker:prod": "docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build",
+    "docker:prod:down": "docker compose -f docker-compose.yml -f docker-compose.prod.yml down"
   },
   "devDependencies": {
     "turbo": "^2.5.0",
