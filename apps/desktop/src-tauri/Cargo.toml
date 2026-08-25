@@ -26,6 +26,6 @@ portable-pty = "0.9"
 parking_lot = "0.12"
 uuid = { version = "1", features = ["v4"] }
 tauri-plugin-dialog = "2.7.2"
-notify = "8"
 tauri-plugin-store = "2.4.4"
+sysinfo = "0.39.6"
 

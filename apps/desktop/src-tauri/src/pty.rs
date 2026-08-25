@@ -1,15 +1,23 @@
 use std::collections::HashMap;
 use std::io::{Read, Write};
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
 
 use parking_lot::Mutex;
 use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtySize};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, State};
 
+use crate::claude_detect::is_claude_running_in;
+
 struct PtySession {
     master: Box<dyn MasterPty + Send>,
     writer: Box<dyn Write + Send>,
     child: Box<dyn Child + Send + Sync>,
+    /// Cleared on pty_kill so the claude-detection poller thread stops.
+    alive: Arc<AtomicBool>,
 }
 
 #[derive(Default)]
@@ -26,6 +34,14 @@ struct PtyExitPayload {
     id: String,
     code: Option<u32>,
 }
+
+#[derive(Serialize, Clone)]
+struct PtyClaudeStatusPayload {
+    id: String,
+    running: bool,
+}
+
+const CLAUDE_POLL_INTERVAL: Duration = Duration::from_secs(2);
 
 #[tauri::command]
 pub fn pty_spawn(
@@ -77,11 +93,14 @@ pub fn pty_spawn(
     let writer = pair.master.take_writer().map_err(|e| e.to_string())?;
 
     let id = uuid::Uuid::new_v4().to_string();
+    let alive = Arc::new(AtomicBool::new(true));
+    let root_pid = child.process_id();
 
     let session = PtySession {
         master: pair.master,
         writer,
         child,
+        alive: alive.clone(),
     };
     state.0.lock().insert(id.clone(), session);
 
@@ -113,6 +132,38 @@ pub fn pty_spawn(
             },
         );
     });
+
+    // Periodically checks whether a `claude` process is running as a
+    // descendant of this shell with a matching cwd, and tells the frontend
+    // only when that changes — this is what backs the "Claude Code
+    // Terminal" presence node, instead of just assuming a terminal tab
+    // being open means Claude is active in it.
+    if let Some(root_pid) = root_pid {
+        let project_dir = PathBuf::from(&cwd);
+        let claude_app = app.clone();
+        let claude_id = id.clone();
+        let claude_alive = alive;
+        std::thread::spawn(move || {
+            let mut last_known = false;
+            while claude_alive.load(Ordering::Relaxed) {
+                std::thread::sleep(CLAUDE_POLL_INTERVAL);
+                if !claude_alive.load(Ordering::Relaxed) {
+                    break;
+                }
+                let running = is_claude_running_in(root_pid, &project_dir);
+                if running != last_known {
+                    last_known = running;
+                    let _ = claude_app.emit(
+                        "pty://claude-status",
+                        PtyClaudeStatusPayload {
+                            id: claude_id.clone(),
+                            running,
+                        },
+                    );
+                }
+            }
+        });
+    }
 
     Ok(id)
 }
@@ -153,6 +204,7 @@ pub fn pty_resize(
 pub fn pty_kill(state: State<'_, PtyState>, id: String) -> Result<(), String> {
     let mut sessions = state.0.lock();
     if let Some(mut session) = sessions.remove(&id) {
+        session.alive.store(false, Ordering::Relaxed);
         let _ = session.child.kill();
     }
     Ok(())

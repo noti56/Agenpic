@@ -1,19 +1,25 @@
-import { useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Button } from "@agenpic/ui";
 import { useProjectContext } from "../state/ProjectContext";
 import { useEffectiveRole } from "../hooks/useEffectiveRole";
 import { useLocalProjectPath } from "../hooks/useLocalProjectPath";
-import { useClaudeSync } from "../hooks/useClaudeSync";
+import { useAgenpicCliConfig } from "../hooks/useAgenpicCliConfig";
+import { toggleLogViewer } from "../lib/logger";
 import { TerminalPanel } from "../components/TerminalPanel";
 import { MissionHangarPanel } from "../components/MissionHangarPanel";
-import { PresenceMap } from "../components/PresenceMap";
 import { ChatPanel } from "../components/ChatPanel";
+
+// Phaser (~1MB) / the markdown editor are only needed once their tabs are
+// actually visited — code-split them out of the main bundle instead of
+// paying that parse/init cost on every app launch.
+const PresenceMap = lazy(() => import("../components/PresenceMap").then((m) => ({ default: m.PresenceMap })));
+const DocsPanel = lazy(() => import("../components/DocsPanel").then((m) => ({ default: m.DocsPanel })));
 import { MembersPanel } from "./MembersPanel";
 import { SettingsPanel } from "./SettingsPanel";
 import { ProjectPathSetup } from "./ProjectPathSetup";
 import styles from "./Shell.module.css";
 
-type Tab = "terminal" | "hangar" | "map" | "chat";
+type Tab = "terminal" | "hangar" | "map" | "chat" | "docs";
 
 export function Shell() {
   const { activeProject, selectProject } = useProjectContext();
@@ -33,7 +39,24 @@ export function Shell() {
   const projectPath = isOwner ? activeProject?.path : (localPath ?? undefined);
   const needsPathSetup = !isOwner && !isRoleLoading && !isPathLoading && !localPath;
 
-  useClaudeSync(activeProject?.id, projectPath);
+  useAgenpicCliConfig(activeProject?.id, projectPath);
+
+  // Global "~" shortcut to toggle the log panel, like a game/dev console —
+  // skipped while typing in the terminal or any input so `~` still types
+  // normally there (e.g. `~/projects` paths).
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "`" && e.key !== "~") return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+      if (target?.closest(".xterm")) return;
+      e.preventDefault();
+      toggleLogViewer();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   if (!activeProject) return null;
 
@@ -88,6 +111,12 @@ export function Shell() {
           >
             Chat
           </button>
+          <button
+            className={[styles.tab, tab === "docs" ? styles.tabActive : ""].join(" ")}
+            onClick={() => setTab("docs")}
+          >
+            Docs
+          </button>
         </nav>
 
         <div className={styles.headerRight}>
@@ -102,6 +131,9 @@ export function Shell() {
           <Button variant="ghost" onClick={() => setShowMembers(true)}>
             Members
           </Button>
+          <Button variant="ghost" onClick={toggleLogViewer} title="Toggle logs (~)">
+            Logs
+          </Button>
         </div>
       </header>
 
@@ -113,10 +145,17 @@ export function Shell() {
           <MissionHangarPanel project={activeProject} role={role} />
         </div>
         <div style={{ display: tab === "map" ? "block" : "none", height: "100%" }}>
-          <PresenceMap projectId={activeProject.id} />
+          <Suspense fallback={null}>
+            <PresenceMap project={activeProject} />
+          </Suspense>
         </div>
         <div style={{ display: tab === "chat" ? "block" : "none", height: "100%" }}>
           <ChatPanel projectId={activeProject.id} />
+        </div>
+        <div style={{ display: tab === "docs" ? "block" : "none", height: "100%" }}>
+          <Suspense fallback={null}>
+            <DocsPanel projectId={activeProject.id} role={role} />
+          </Suspense>
         </div>
       </main>
 

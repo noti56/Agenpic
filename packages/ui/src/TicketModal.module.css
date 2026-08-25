@@ -160,6 +160,56 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  cursor: zoom-in;
+  transition: transform 140ms ease, filter 140ms ease;
+}
+
+.imageThumb:hover {
+  transform: scale(1.04);
+  filter: brightness(1.1);
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 2, 6, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 80;
+  padding: 48px;
+  box-sizing: border-box;
+  cursor: zoom-out;
+  animation: fadeIn 140ms ease;
+}
+
+.lightboxImage {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--agp-radius-md);
+  box-shadow: 0 0 40px rgba(0, 255, 242, 0.15);
+  cursor: default;
+}
+
+.lightboxCloseBtn {
+  position: absolute;
+  top: 24px;
+  right: 32px;
+  background: rgba(16, 16, 28, 0.8);
+  border: 1px solid var(--agp-border);
+  color: var(--agp-text);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.lightboxCloseBtn:hover {
+  color: var(--agp-cyan);
+  border-color: var(--agp-cyan-dim);
 }
 
 .imageRemoveBtn {
@@ -251,6 +301,30 @@
 
 .commentInput:focus {
   border-color: var(--agp-cyan-dim);
+  box-shadow: var(--agp-glow-cyan);
+}
+
+.commentSendBtn {
+  flex-shrink: 0;
+  background: rgba(0, 255, 242, 0.08);
+  border: 1px solid var(--agp-cyan-dim);
+  color: var(--agp-cyan);
+  border-radius: var(--agp-radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 16px;
+  cursor: pointer;
+  transition: background 120ms ease, box-shadow 120ms ease;
+}
+
+.commentSendBtn:hover:not(:disabled) {
+  background: rgba(0, 255, 242, 0.16);
+  box-shadow: var(--agp-glow-cyan);
+}
+
+.commentSendBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .emptyHint {
@@ -261,23 +335,39 @@
 .select {
   width: 100%;
   appearance: none;
-  background: var(--agp-bg-panel);
+  background-color: var(--agp-bg-panel);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2300fff2' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 11px;
   border: 1px solid var(--agp-border);
   border-radius: var(--agp-radius-sm);
   color: var(--agp-text);
   font-size: 13px;
-  padding: 8px 10px;
+  font-family: var(--agp-font-sans);
+  padding: 9px 32px 9px 12px;
   outline: none;
   cursor: pointer;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.select:hover:not(:disabled) {
+  border-color: var(--agp-cyan-dim);
 }
 
 .select:focus {
   border-color: var(--agp-cyan-dim);
+  box-shadow: var(--agp-glow-cyan);
 }
 
 .select:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.select option {
+  background: var(--agp-bg-panel);
+  color: var(--agp-text);
 }
 
 .metaRow {

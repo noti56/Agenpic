@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { LogEntry } from "@agenpic/logger";
-import { onLogsChange } from "../lib/logger";
+import { onLogsChange, onLogViewerOpenChange, setLogViewerOpen } from "../lib/logger";
 import styles from "./LogViewer.module.css";
 
 export function LogViewer() {
@@ -9,6 +9,7 @@ export function LogViewer() {
   const listRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => onLogsChange(setEntries), []);
+  useEffect(() => onLogViewerOpenChange(setOpen), []);
 
   useEffect(() => {
     if (open && listRef.current) {
@@ -16,24 +17,18 @@ export function LogViewer() {
     }
   }, [entries, open]);
 
-  if (!open) {
-    return (
-      <button className={styles.toggle} onClick={() => setOpen(true)}>
-        ▲ Logs ({entries.length})
-      </button>
-    );
-  }
+  if (!open) return null;
 
   return (
-    <div className={styles.drawer}>
+    <div className={styles.panel}>
       <div className={styles.header}>
         <span className={styles.title}>Logs — frontend (this session)</span>
         <div className={styles.headerActions}>
           <button className={styles.iconBtn} onClick={() => setEntries([])}>
-            Clear view
+            Clear
           </button>
-          <button className={styles.iconBtn} onClick={() => setOpen(false)} aria-label="Close">
-            ▼
+          <button className={styles.iconBtn} onClick={() => setLogViewerOpen(false)} aria-label="Close">
+            ✕
           </button>
         </div>
       </div>

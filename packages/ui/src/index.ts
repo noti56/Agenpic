@@ -11,3 +11,5 @@ export { TicketModal } from "./TicketModal";
 export type { TicketModalProps } from "./TicketModal";
 export { ChatPanel } from "./Chat";
 export type { ChatPanelProps } from "./Chat";
+export { DocsPanel } from "./Docs";
+export type { DocsPanelProps } from "./Docs";

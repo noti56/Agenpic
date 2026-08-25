@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { HERO_DEFS, type HeroDef } from "./sprites/heroDefs";
-import { HeroSprite } from "./sprites/HeroSprite";
+import { HERO_DEFS, SPRITE_URLS, type HeroDef } from "./sprites/heroDefs";
 import styles from "./HeroPicker.module.css";
 
 interface HeroPickerProps {
@@ -15,7 +14,7 @@ export function HeroPicker({ hero, onSelect }: HeroPickerProps) {
     <div className={styles.wrap}>
       <button type="button" className={styles.trigger} onClick={() => setOpen((v) => !v)}>
         <span className={styles.triggerThumb}>
-          <HeroSprite hero={hero} facing="right" walking={false} size={24} />
+          <img src={SPRITE_URLS[hero.textureKey]} alt="" className={styles.thumbImg} />
         </span>
         {hero.name}
       </button>
@@ -36,7 +35,7 @@ export function HeroPicker({ hero, onSelect }: HeroPickerProps) {
                     setOpen(false);
                   }}
                 >
-                  <HeroSprite hero={h} facing="right" walking={false} size={36} />
+                  <img src={SPRITE_URLS[h.textureKey]} alt="" className={styles.optionImg} />
                   <span>{h.name}</span>
                 </button>
               ))}

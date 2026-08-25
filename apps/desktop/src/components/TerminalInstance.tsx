@@ -12,16 +12,28 @@ interface PtyOutputPayload {
   data: string;
 }
 
+interface PtyClaudeStatusPayload {
+  id: string;
+  running: boolean;
+}
+
 interface TerminalInstanceProps {
   cwd: string;
+  /** Called whenever the backend's ancestry+cwd check for this tab's PTY
+   * flips — i.e. a real `claude` process is (or is no longer) running in
+   * this terminal, scoped to this project directory. Not called for
+   * anything else running in the shell. */
+  onClaudeStatusChange?: (running: boolean) => void;
 }
 
 const log = getLogger("pty");
 
 /** One xterm.js view wired to one PTY session. A single terminal tab. */
-export function TerminalInstance({ cwd }: TerminalInstanceProps) {
+export function TerminalInstance({ cwd, onClaudeStatusChange }: TerminalInstanceProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const ptyIdRef = useRef<string | null>(null);
+  const onClaudeStatusChangeRef = useRef(onClaudeStatusChange);
+  onClaudeStatusChangeRef.current = onClaudeStatusChange;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -45,6 +57,7 @@ export function TerminalInstance({ cwd }: TerminalInstanceProps) {
 
     let unlistenOutput: UnlistenFn | undefined;
     let unlistenExit: UnlistenFn | undefined;
+    let unlistenClaudeStatus: UnlistenFn | undefined;
     let cancelled = false;
 
     (async () => {
@@ -57,6 +70,12 @@ export function TerminalInstance({ cwd }: TerminalInstanceProps) {
         if (event.payload.id === ptyIdRef.current) {
           term.write("\r\n[process exited]\r\n");
           log.info("pty exited", { id: event.payload.id });
+          onClaudeStatusChangeRef.current?.(false);
+        }
+      });
+      unlistenClaudeStatus = await listen<PtyClaudeStatusPayload>("pty://claude-status", (event) => {
+        if (event.payload.id === ptyIdRef.current) {
+          onClaudeStatusChangeRef.current?.(event.payload.running);
         }
       });
 
@@ -98,10 +117,12 @@ export function TerminalInstance({ cwd }: TerminalInstanceProps) {
       resizeObserver.disconnect();
       unlistenOutput?.();
       unlistenExit?.();
+      unlistenClaudeStatus?.();
       if (ptyIdRef.current) {
         log.info("pty killed on unmount", { id: ptyIdRef.current });
         invoke("pty_kill", { id: ptyIdRef.current }).catch((err) => log.error("pty_kill failed", err));
       }
+      onClaudeStatusChangeRef.current?.(false);
       term.dispose();
     };
   }, [cwd]);

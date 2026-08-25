@@ -1,7 +1,11 @@
 import { createAgenpicClient } from "@agenpic/pocketbase-client";
 import { isTauriRuntime, TauriAuthStore } from "./tauriAuthStore";
 
-export const POCKETBASE_URL = "http://127.0.0.1:8090";
+// Baked in at `vite build` time from apps/desktop/.env.production (see
+// .env.example) — a shipped build never reads this at runtime, so pointing
+// a distributed build at a different backend means rebuilding, not just
+// setting an env var on the teammate's machine.
+export const POCKETBASE_URL = import.meta.env.VITE_POCKETBASE_URL || "http://127.0.0.1:8090";
 
 const tauriAuthStore = isTauriRuntime() ? new TauriAuthStore() : undefined;
 

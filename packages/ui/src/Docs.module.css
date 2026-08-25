@@ -1,0 +1,365 @@
+.wrap {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--agp-border-soft);
+  background: var(--agp-bg-panel);
+}
+
+.sidebarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--agp-border-soft);
+}
+
+.sidebarTitle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--agp-text-dim);
+}
+
+.newBtn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--agp-radius-sm);
+  border: 1px solid var(--agp-border);
+  background: none;
+  color: var(--agp-text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.newBtn:hover {
+  border-color: var(--agp-cyan-dim);
+  color: var(--agp-cyan);
+}
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.listItem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--agp-radius-sm);
+  border: 1px solid transparent;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.listItem:hover {
+  background: var(--agp-bg-raised-solid);
+}
+
+.listItemActive {
+  background: var(--agp-bg-raised-solid);
+  border-color: var(--agp-cyan-dim);
+}
+
+.listItemTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--agp-text);
+}
+
+.listItemSlug {
+  font-size: 11px;
+  font-family: var(--agp-font-mono);
+  color: var(--agp-text-faint);
+}
+
+.emptyHint {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--agp-text-faint);
+  font-style: italic;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.emptyState {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.emptyIcon {
+  font-size: 32px;
+  opacity: 0.8;
+}
+
+.emptyTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--agp-text-dim);
+  margin: 0;
+}
+
+.emptyCta {
+  margin-top: 6px;
+  border-radius: var(--agp-radius-sm);
+  border: 1px solid var(--agp-cyan-dim);
+  background: none;
+  color: var(--agp-cyan);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.emptyCta:hover {
+  box-shadow: var(--agp-glow-cyan);
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.detailHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--agp-border-soft);
+  flex-shrink: 0;
+}
+
+.titleInput {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  color: var(--agp-text);
+  font-size: 16px;
+  font-weight: 700;
+  padding: 4px 6px;
+  border-radius: var(--agp-radius-sm);
+  outline: none;
+}
+
+.titleInput:not(:disabled):focus {
+  background: var(--agp-bg-raised-solid);
+}
+
+.slugBadge {
+  font-size: 11px;
+  font-family: var(--agp-font-mono);
+  color: var(--agp-text-faint);
+  flex-shrink: 0;
+}
+
+.deleteBtn {
+  flex-shrink: 0;
+  border-radius: var(--agp-radius-sm);
+  border: 1px solid var(--agp-border);
+  background: none;
+  color: var(--agp-danger);
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.deleteBtn:hover {
+  border-color: var(--agp-danger);
+}
+
+.editorWrap {
+  flex: 1;
+  min-height: 0;
+}
+
+.editorHost,
+.viewerHost {
+  height: 100%;
+}
+
+.viewerHost {
+  overflow-y: auto;
+  padding: 16px 20px;
+  background: var(--agp-bg-base);
+}
+
+/* Toast UI Editor/Viewer chrome retint — the library's own dark theme only
+   covers toolbar/container chrome, not content text color, so we patch that
+   in here to stay on-brand and readable. */
+.editorWrap :global(.toastui-editor-defaultUI) {
+  border: none;
+}
+
+.editorWrap :global(.toastui-editor-dark) :global(.toastui-editor-defaultUI-toolbar .scroll-sync.active::before),
+.editorWrap :global(.toastui-editor-dark) :global(.tab-item.active) {
+  color: var(--agp-cyan);
+}
+
+:global(.toastui-editor-dark) :global(.ProseMirror),
+:global(.toastui-editor-dark) :global(.toastui-editor-contents) {
+  color: var(--agp-text);
+}
+
+:global(.toastui-editor-dark) :global(.toastui-editor-contents) h1,
+:global(.toastui-editor-dark) :global(.toastui-editor-contents) h2,
+:global(.toastui-editor-dark) :global(.toastui-editor-contents) h3,
+:global(.toastui-editor-dark) :global(.toastui-editor-contents) h4 {
+  color: var(--agp-text);
+  border-bottom-color: var(--agp-border-soft);
+}
+
+:global(.toastui-editor-dark) :global(.toastui-editor-contents) a {
+  color: var(--agp-cyan);
+}
+
+:global(.toastui-editor-dark) :global(.toastui-editor-contents) code {
+  background: var(--agp-bg-raised-solid);
+  color: var(--agp-cyan);
+}
+
+:global(.toastui-editor-dark) :global(.toastui-editor-contents) blockquote {
+  border-left-color: var(--agp-cyan-dim);
+  color: var(--agp-text-dim);
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal {
+  width: 380px;
+  max-width: 90vw;
+  background: var(--agp-bg-panel);
+  border: 1px solid var(--agp-border);
+  border-radius: var(--agp-radius-lg);
+  padding: 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+.modalTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--agp-text);
+  margin: 0 0 14px;
+}
+
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fieldLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--agp-text-dim);
+}
+
+.fieldInput {
+  background: var(--agp-bg-raised-solid);
+  border: 1px solid var(--agp-border);
+  border-radius: var(--agp-radius-sm);
+  color: var(--agp-text);
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  padding: 8px 10px;
+  outline: none;
+}
+
+.fieldInput:focus {
+  border-color: var(--agp-cyan-dim);
+  box-shadow: var(--agp-glow-cyan);
+}
+
+.errorText {
+  font-size: 12px;
+  color: var(--agp-danger);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.cancelBtn,
+.createBtn {
+  border-radius: var(--agp-radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.cancelBtn {
+  border: 1px solid var(--agp-border);
+  background: none;
+  color: var(--agp-text-dim);
+}
+
+.createBtn {
+  border: 1px solid var(--agp-cyan-dim);
+  background: var(--agp-cyan);
+  color: var(--agp-bg-void);
+}
+
+.createBtn:hover {
+  box-shadow: var(--agp-glow-cyan);
+}
+
+@media (max-width: 720px) {
+  .wrap {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    max-height: 160px;
+    border-right: none;
+    border-bottom: 1px solid var(--agp-border-soft);
+  }
+}

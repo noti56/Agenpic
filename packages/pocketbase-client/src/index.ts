@@ -1,6 +1,7 @@
 import PocketBase, { BaseAuthStore, type RecordModel } from "pocketbase";
 import type {
   CommentRecord,
+  DocRecord,
   MessageRecord,
   ProjectMemberRecord,
   ProjectRecord,
@@ -37,6 +38,10 @@ export class AgenpicClient {
 
   get ticketComments() {
     return this.pb.collection<CommentRecord & RecordModel>("ticket_comments");
+  }
+
+  get docs() {
+    return this.pb.collection<DocRecord & RecordModel>("docs");
   }
 
   /** Accepts any record-shaped object that carries `collectionId`/`collectionName` at runtime (all records returned by this client do), matching the underlying SDK's loose signature. */
@@ -86,6 +91,7 @@ export function createAgenpicClient(url: string, authStore?: BaseAuthStore): Age
 
 export type {
   CommentRecord,
+  DocRecord,
   MessageRecord,
   ProjectMemberRecord,
   ProjectRecord,

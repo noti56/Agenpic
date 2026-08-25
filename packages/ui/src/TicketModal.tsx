@@ -49,6 +49,7 @@ export function TicketModal({
   const [title, setTitle] = useState(ticket.title);
   const [description, setDescription] = useState(ticket.description);
   const [commentDraft, setCommentDraft] = useState("");
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => setTitle(ticket.title), [ticket.id, ticket.title]);
@@ -56,11 +57,13 @@ export function TicketModal({
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      if (previewImage) setPreviewImage(null);
+      else onClose();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, [onClose, previewImage]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -117,7 +120,12 @@ export function TicketModal({
               <div className={styles.imageGrid}>
                 {ticket.images.map((filename) => (
                   <div key={filename} className={styles.imageThumbWrap}>
-                    <img className={styles.imageThumb} src={imageUrl(filename)} alt="" />
+                    <img
+                      className={styles.imageThumb}
+                      src={imageUrl(filename)}
+                      alt=""
+                      onClick={() => setPreviewImage(imageUrl(filename))}
+                    />
                     {!readOnly && (
                       <button
                         type="button"
@@ -177,6 +185,13 @@ export function TicketModal({
                     onChange={(e) => setCommentDraft(e.target.value)}
                     placeholder="Write a comment…"
                   />
+                  <button
+                    type="submit"
+                    className={styles.commentSendBtn}
+                    disabled={!commentDraft.trim()}
+                  >
+                    Send
+                  </button>
                 </form>
               )}
             </section>
@@ -235,6 +250,26 @@ export function TicketModal({
           </div>
         </div>
       </Panel>
+
+      {previewImage && (
+        <div
+          className={styles.lightbox}
+          onClick={(e) => {
+            e.stopPropagation();
+            setPreviewImage(null);
+          }}
+        >
+          <button
+            type="button"
+            className={styles.lightboxCloseBtn}
+            onClick={() => setPreviewImage(null)}
+            aria-label="Close preview"
+          >
+            ✕
+          </button>
+          <img className={styles.lightboxImage} src={previewImage} alt="" />
+        </div>
+      )}
     </div>
   );
 }

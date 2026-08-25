@@ -1,0 +1,11 @@
+.wrap {
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dim {
+  color: var(--agp-text-dim);
+  font-size: 13px;
+  padding: 16px;
+}

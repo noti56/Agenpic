@@ -1,78 +1,42 @@
-export type HairStyle = "spiky" | "mohawk" | "pony" | "bob" | "hood" | "helmet";
+import robotUrl from "../../assets/map/characters/robot.png";
+import roninUrl from "../../assets/map/characters/ronin.png";
+import novaUrl from "../../assets/map/characters/nova.png";
+import blazeUrl from "../../assets/map/characters/blaze.png";
+import jadeUrl from "../../assets/map/characters/jade.png";
+import ghostUrl from "../../assets/map/characters/ghost.png";
+import byteUrl from "../../assets/map/characters/byte.png";
 
 export interface HeroDef {
   id: string;
   name: string;
-  skin: string;
-  hair: string;
-  outfit: string;
-  outfitDark: string;
+  /** Phaser texture key this hero is preloaded under — see OfficeScene. */
+  textureKey: string;
+  /** Accent used for the picker's active ring and the avatar's proximity glow. */
   accent: string;
-  hairStyle: HairStyle;
 }
 
 export const HERO_DEFS: HeroDef[] = [
-  {
-    id: "ronin",
-    name: "Ronin",
-    skin: "#e8b98c",
-    hair: "#2b2b2b",
-    outfit: "#ff4d4d",
-    outfitDark: "#8c1f1f",
-    accent: "#ffcf4d",
-    hairStyle: "spiky",
-  },
-  {
-    id: "nova",
-    name: "Nova",
-    skin: "#f0c9a0",
-    hair: "#2fd0ff",
-    outfit: "#1c6cff",
-    outfitDark: "#0d3aa0",
-    accent: "#00fff2",
-    hairStyle: "pony",
-  },
-  {
-    id: "blaze",
-    name: "Blaze",
-    skin: "#d9a066",
-    hair: "#ff7a1a",
-    outfit: "#ff9d1a",
-    outfitDark: "#b5590a",
-    accent: "#ffe14d",
-    hairStyle: "mohawk",
-  },
-  {
-    id: "jade",
-    name: "Jade",
-    skin: "#e6b892",
-    hair: "#14251a",
-    outfit: "#2ecc71",
-    outfitDark: "#1c7a44",
-    accent: "#d4ffea",
-    hairStyle: "bob",
-  },
-  {
-    id: "ghost",
-    name: "Ghost",
-    skin: "#cfd6e4",
-    hair: "#7b2ff7",
-    outfit: "#7b2ff7",
-    outfitDark: "#4a1b99",
-    accent: "#e0d4ff",
-    hairStyle: "hood",
-  },
-  {
-    id: "byte",
-    name: "Byte",
-    skin: "#caa98a",
-    hair: "#ffd23f",
-    outfit: "#ffd23f",
-    outfitDark: "#cc9e00",
-    accent: "#00fff2",
-    hairStyle: "helmet",
-  },
+  { id: "ronin", name: "Ronin", textureKey: "hero-ronin", accent: "#ff4d4d" },
+  { id: "nova", name: "Nova", textureKey: "hero-nova", accent: "#00fff2" },
+  { id: "blaze", name: "Blaze", textureKey: "hero-blaze", accent: "#ffb14d" },
+  { id: "jade", name: "Jade", textureKey: "hero-jade", accent: "#2ecc71" },
+  { id: "ghost", name: "Ghost", textureKey: "hero-ghost", accent: "#c9d6e8" },
+  { id: "byte", name: "Byte", textureKey: "hero-byte", accent: "#ffd23f" },
 ];
+
+/** Texture key for the agent (Claude Code Terminal) avatar — preloaded once, shared by every agent node. */
+export const AGENT_TEXTURE_KEY = "hero-robot";
+
+/** Everything OfficeScene needs to preload, keyed by the same textureKey each HeroDef/AGENT_TEXTURE_KEY refers to. */
+export const SPRITE_URLS: Record<string, string> = {
+  "hero-robot": robotUrl,
+  "hero-ronin": roninUrl,
+  "hero-nova": novaUrl,
+  "hero-blaze": blazeUrl,
+  "hero-jade": jadeUrl,
+  "hero-ghost": ghostUrl,
+  "hero-byte": byteUrl,
+};
 
 /** Deterministic hash used to pick a stable default hero for peers who haven't chosen one yet. */
 function hashSeed(seed: string): number {

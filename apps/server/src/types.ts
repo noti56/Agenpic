@@ -5,6 +5,8 @@ export interface PeerMeta {
   path?: string;
   /** For user nodes: the id of the chosen hero sprite. */
   hero?: string;
+  /** For agent nodes: display name of the human who owns/spawned this Claude Code session. */
+  owner?: string;
 }
 
 export interface PeerState {

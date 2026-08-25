@@ -47,6 +47,16 @@ export interface TicketRecord {
   updated: string;
 }
 
+export interface DocRecord {
+  id: string;
+  project: string;
+  slug: string;
+  title: string;
+  content: string;
+  created: string;
+  updated: string;
+}
+
 export interface CommentRecord {
   id: string;
   ticket: string;
