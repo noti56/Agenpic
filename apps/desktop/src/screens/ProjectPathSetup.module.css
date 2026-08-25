@@ -1,0 +1,49 @@
+.wrap {
+  height: 100vh;
+  width: 100vw;
+  background: var(--agp-bg-void);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panel {
+  width: 420px;
+  padding: 24px;
+}
+
+.title {
+  margin: 0 0 6px;
+  font-family: var(--agp-font-mono);
+  font-size: 16px;
+  color: var(--agp-cyan);
+}
+
+.hint {
+  margin: 0 0 18px;
+  font-size: 12px;
+  color: var(--agp-text-dim);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pathRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.pathRow > *:first-child {
+  flex: 1;
+}
+
+.formActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}

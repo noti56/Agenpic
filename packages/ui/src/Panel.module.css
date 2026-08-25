@@ -1,0 +1,5 @@
+.panel {
+  background: var(--agp-bg-panel);
+  border: 1px solid var(--agp-border-soft);
+  border-radius: var(--agp-radius-lg);
+}

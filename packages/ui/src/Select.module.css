@@ -1,0 +1,48 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-family: var(--agp-font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--agp-text-faint);
+}
+
+.wrap {
+  position: relative;
+}
+
+.select {
+  appearance: none;
+  width: 100%;
+  font-family: var(--agp-font-sans);
+  font-size: 14px;
+  padding: 9px 32px 9px 12px;
+  border-radius: var(--agp-radius-sm);
+  border: 1px solid var(--agp-border);
+  background: var(--agp-bg-panel);
+  color: var(--agp-text);
+  outline: none;
+  cursor: pointer;
+  transition: border-color var(--agp-transition-fast), box-shadow var(--agp-transition-fast);
+}
+
+.select:focus {
+  border-color: var(--agp-cyan-dim);
+  box-shadow: var(--agp-glow-cyan);
+}
+
+.arrow {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--agp-cyan-dim);
+  font-size: 10px;
+}

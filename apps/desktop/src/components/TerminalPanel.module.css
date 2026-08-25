@@ -1,0 +1,85 @@
+.wrap {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--agp-bg-base);
+}
+
+.tabBar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px 0 8px;
+  background: var(--agp-bg-panel);
+  border-bottom: 1px solid var(--agp-border-soft);
+  flex-shrink: 0;
+}
+
+.tabItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--agp-radius-sm) var(--agp-radius-sm) 0 0;
+  font-size: 12px;
+  color: var(--agp-text-dim);
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  cursor: pointer;
+  transition: color var(--agp-transition-fast), background var(--agp-transition-fast);
+}
+
+.tabItem:hover {
+  color: var(--agp-text);
+}
+
+.tabItemActive {
+  color: var(--agp-cyan);
+  background: var(--agp-bg-base);
+  border-color: var(--agp-border-soft);
+}
+
+.tabCloseBtn {
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.tabCloseBtn:hover {
+  opacity: 1;
+  color: var(--agp-danger);
+}
+
+.addTabBtn {
+  background: none;
+  border: none;
+  color: var(--agp-text-faint);
+  cursor: pointer;
+  font-size: 15px;
+  padding: 4px 10px;
+  line-height: 1;
+}
+
+.addTabBtn:hover {
+  color: var(--agp-cyan);
+}
+
+.instances {
+  flex: 1;
+  min-height: 0;
+}
+
+.terminal {
+  height: 100%;
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+  background: var(--agp-bg-base);
+}

@@ -1,0 +1,35 @@
+.Toastify__toast-container {
+  --toastify-color-dark: var(--agp-bg-panel);
+  font-family: var(--agp-font-sans);
+}
+
+.agp-toast {
+  background: var(--agp-bg-raised-solid) !important;
+  border: 1px solid var(--agp-border) !important;
+  border-radius: var(--agp-radius-md) !important;
+  color: var(--agp-text) !important;
+  font-size: 13px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+}
+
+.agp-toast-teammate-joined {
+  border-color: var(--agp-cyan-dim) !important;
+  box-shadow: var(--agp-glow-cyan), 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+}
+
+.agp-toast-ticket-moved {
+  border-color: var(--agp-magenta-dim) !important;
+}
+
+.agp-toast-message-flagged {
+  border-color: var(--agp-warning) !important;
+}
+
+.Toastify__progress-bar {
+  background: var(--agp-cyan) !important;
+}
+
+.Toastify__close-button {
+  color: var(--agp-text-dim) !important;
+  opacity: 0.7;
+}

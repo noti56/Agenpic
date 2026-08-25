@@ -1,0 +1,129 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 2, 6, 0.6);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 50;
+  animation: fadeIn 160ms ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.drawer {
+  width: 380px;
+  height: 100%;
+  border-radius: 0;
+  border-left: 1px solid var(--agp-border);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: -20px 0 40px rgba(0, 0, 0, 0.4);
+  animation: slideInRight 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  margin: 0;
+  font-size: 15px;
+  color: var(--agp-text);
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: var(--agp-text-dim);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.closeBtn:hover {
+  color: var(--agp-cyan);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  border: 1px solid var(--agp-border-soft);
+  border-radius: var(--agp-radius-sm);
+  gap: 8px;
+}
+
+.memberEmail {
+  font-size: 12px;
+  color: var(--agp-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rowActions :global(.field) {
+  min-width: 100px;
+}
+
+.roleBadge {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--agp-cyan-dim);
+}
+
+.inviteForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--agp-border-soft);
+}
+
+.error {
+  font-size: 12px;
+  color: var(--agp-danger);
+}
+
+.dim {
+  color: var(--agp-text-dim);
+  font-size: 12px;
+}

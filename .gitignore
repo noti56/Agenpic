@@ -1,0 +1,42 @@
+# Dependencies
+node_modules
+
+# Turborepo
+.turbo
+
+# Build outputs
+dist
+dist-ssr
+build
+src-tauri/target
+
+# Env
+.env
+.env.local
+*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# PocketBase data
+pb_data
+
+# Claude Code local runtime state
+.claude/scheduled_tasks.lock
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

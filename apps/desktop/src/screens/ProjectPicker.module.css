@@ -1,0 +1,114 @@
+.wrap {
+  height: 100vh;
+  width: 100vw;
+  background: var(--agp-bg-void);
+  padding: 32px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--agp-font-mono);
+  font-size: 20px;
+  letter-spacing: 0.08em;
+  color: var(--agp-cyan);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.userEmail {
+  font-size: 12px;
+  color: var(--agp-text-dim);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  padding: 18px;
+  cursor: pointer;
+  transition: border-color var(--agp-transition-fast), box-shadow var(--agp-transition-fast);
+}
+
+.card:hover {
+  border-color: var(--agp-cyan-dim);
+  box-shadow: var(--agp-glow-cyan);
+}
+
+.cardName {
+  font-weight: 600;
+  color: var(--agp-text);
+  margin-bottom: 4px;
+}
+
+.cardPath {
+  font-family: var(--agp-font-mono);
+  font-size: 11px;
+  color: var(--agp-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.addCard {
+  min-height: 90px;
+  border: 1px dashed var(--agp-border);
+  border-radius: var(--agp-radius-lg);
+  background: transparent;
+  color: var(--agp-text-dim);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color var(--agp-transition-fast), color var(--agp-transition-fast);
+}
+
+.addCard:hover {
+  border-color: var(--agp-cyan-dim);
+  color: var(--agp-cyan);
+}
+
+.createCard {
+  grid-column: span 2;
+  padding: 18px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pathRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.pathRow > *:first-child {
+  flex: 1;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.dim {
+  color: var(--agp-text-dim);
+  font-size: 13px;
+}

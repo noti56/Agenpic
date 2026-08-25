@@ -1,0 +1,12 @@
+.wrap {
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.dim {
+  color: var(--agp-text-dim);
+  font-size: 13px;
+}

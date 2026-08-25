@@ -1,0 +1,107 @@
+.sprite {
+  overflow: visible;
+  display: block;
+}
+
+.body {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+.idle .body {
+  animation: bob 2.4s ease-in-out infinite;
+}
+
+.walking .body {
+  animation: bobWalk 0.42s ease-in-out infinite;
+}
+
+.legLeft,
+.legRight {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+}
+
+.walking .legLeft {
+  animation: swingA 0.42s ease-in-out infinite;
+}
+
+.walking .legRight {
+  animation: swingB 0.42s ease-in-out infinite;
+}
+
+.armFront {
+  transform-box: fill-box;
+  transform-origin: 15% 50%;
+}
+
+.walking .armFront {
+  animation: punch 0.42s ease-in-out infinite;
+}
+
+.eyes {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: blink 4.4s ease-in-out infinite;
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1.5px);
+  }
+}
+
+@keyframes bobWalk {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes swingA {
+  0%,
+  100% {
+    transform: rotate(-20deg);
+  }
+  50% {
+    transform: rotate(20deg);
+  }
+}
+
+@keyframes swingB {
+  0%,
+  100% {
+    transform: rotate(20deg);
+  }
+  50% {
+    transform: rotate(-20deg);
+  }
+}
+
+@keyframes punch {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  50% {
+    transform: translateX(2px) rotate(-8deg);
+  }
+}
+
+@keyframes blink {
+  0%,
+  94%,
+  100% {
+    transform: scaleY(1);
+  }
+  97% {
+    transform: scaleY(0.1);
+  }
+}
