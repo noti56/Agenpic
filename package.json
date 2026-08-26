@@ -14,6 +14,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "clean": "turbo run clean",
+    "build:tauri": "turbo run build --filter=@agenpic/logger && pnpm --filter @agenpic/desktop tauri build",
     "docker:prod": "docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build",
     "docker:prod:down": "docker compose -f docker-compose.yml -f docker-compose.prod.yml down"
   },

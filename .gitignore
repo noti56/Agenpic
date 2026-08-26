@@ -29,8 +29,21 @@ lerna-debug.log*
 # PocketBase data
 pb_data
 
+# Agenpic's own per-project scaffold (CLI + local credential) — written by
+# scaffold.rs if this repo is ever opened as a project inside Agenpic
+# itself. Every managed project gets this line auto-appended to its own
+# .gitignore already (see ensure_gitignored in scaffold.rs); this repo just
+# doesn't have one of its own to auto-append to at rest.
+.agenpic/
+
 # Claude Code local runtime state
 .claude/scheduled_tasks.lock
+
+# Locally installed Claude Code skills (npx skills add) — the actual files
+# land in .agents/, symlinked from .claude/skills/ using absolute,
+# machine-specific paths. Personal tooling, not app source.
+.agents/
+.claude/skills/
 
 # Editor directories and files
 .vscode/*
