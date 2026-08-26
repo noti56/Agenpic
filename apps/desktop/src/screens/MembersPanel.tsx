@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { X } from "@phosphor-icons/react/X";
 import type { ProjectMemberRecord, ProjectRecord, UserRecord } from "@agenpic/types";
 import { Button, Panel, Select, TextInput } from "@agenpic/ui";
 import {
@@ -47,7 +48,7 @@ export function MembersPanel({ project, isOwner, onClose }: MembersPanelProps) {
         <div className={styles.header}>
           <h2 className={styles.title}>Members — {project.name}</h2>
           <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
-            ✕
+            <X size={16} weight="bold" />
           </button>
         </div>
 

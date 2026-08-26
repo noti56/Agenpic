@@ -1,7 +1,7 @@
 import Phaser from "phaser";
-import { SPRITE_URLS } from "../sprites/heroDefs";
+import { AGENT_TEXTURE_KEY, SPRITE_URLS } from "../sprites/heroDefs";
 import { TILE_URLS } from "./mapAssets";
-import type { OfficeLayout, RoomDef } from "./officeLayout";
+import { AGENT_SLOT_COUNT, agentSlotPosition, type OfficeLayout, type RoomDef } from "./officeLayout";
 
 export interface AvatarInput {
   /** "self" for the local user, otherwise the peer's socketId. */
@@ -35,6 +35,7 @@ const TEXT_STYLE_BASE: Phaser.Types.GameObjects.Text.TextStyle = {
 
 const WALL_THICKNESS = 6;
 const GRID_SPACING = 128;
+const DOCK_COLOR = 0x7fd6ff;
 
 /**
  * Renders the presence map as a procedurally laid-out office (see
@@ -56,6 +57,7 @@ export class OfficeScene extends Phaser.Scene {
   private ready = false;
   private pendingSync?: AvatarInput[];
   private pendingLayout?: OfficeLayout;
+  private pendingViewport?: { width: number; height: number };
   private layout?: OfficeLayout;
 
   constructor() {
@@ -73,7 +75,6 @@ export class OfficeScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor("#0a0a12");
-    this.cameras.main.setZoom(1);
 
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       if (!this.layout) return;
@@ -83,6 +84,12 @@ export class OfficeScene extends Phaser.Scene {
     });
 
     this.ready = true;
+    // Viewport first: applyLayout fits the camera to the office, which needs
+    // the camera already sized to the container.
+    if (this.pendingViewport) {
+      this.applyViewportSize(this.pendingViewport.width, this.pendingViewport.height);
+      this.pendingViewport = undefined;
+    }
     if (this.pendingLayout) {
       this.applyLayout(this.pendingLayout);
       this.pendingLayout = undefined;
@@ -97,9 +104,43 @@ export class OfficeScene extends Phaser.Scene {
     this.moveHandler = cb;
   }
 
-  /** Sets the camera's screen-space viewport size (the container element's size, not the world). */
+  /**
+   * Sets the camera's screen-space viewport size (the container element's
+   * size, not the world). Safe to call before the scene has booted — the
+   * caller (a ResizeObserver, or the Map tab becoming visible) can fire
+   * while Phaser is still starting up, when `this.cameras` doesn't exist yet.
+   */
   setViewportSize(width: number, height: number) {
+    if (!this.ready) {
+      this.pendingViewport = { width, height };
+      return;
+    }
+    this.applyViewportSize(width, height);
+  }
+
+  private applyViewportSize(width: number, height: number) {
     this.cameras.main.setSize(width, height);
+    this.fitCameraToContent();
+  }
+
+  /**
+   * Zooms/centers the camera so the whole office is visible at once — no
+   * panning or scrolling required, however many rooms the roster needs.
+   *
+   * Fits `layout.content` (the office) rather than the world: the world
+   * carries a wide floor bleed on every side, so whichever axis isn't the
+   * limiting one gets filled with floor instead of empty letterboxing. That
+   * keeps the map covering its whole panel at any window aspect while the
+   * office itself stays entirely on screen.
+   */
+  private fitCameraToContent() {
+    if (!this.layout) return;
+    const { content } = this.layout;
+    const cam = this.cameras.main;
+    if (cam.width <= 0 || cam.height <= 0) return;
+    const zoom = Math.min(cam.width / content.width, cam.height / content.height);
+    cam.setZoom(zoom);
+    cam.centerOn(content.x + content.width / 2, content.y + content.height / 2);
   }
 
   setLayout(layout: OfficeLayout) {
@@ -126,6 +167,7 @@ export class OfficeScene extends Phaser.Scene {
     }
     this.layout = layout;
     this.cameras.main.setBounds(0, 0, layout.worldWidth, layout.worldHeight);
+    this.fitCameraToContent();
 
     const bg = this.add.graphics().setDepth(-30);
     bg.fillStyle(0x0a0a12, 1);
@@ -156,10 +198,17 @@ export class OfficeScene extends Phaser.Scene {
       .setOrigin(0.5, 1)
       .setDepth(-10);
 
-    this.add.image(48, 48, "plant").setDepth(-10);
-    this.add.image(layout.worldWidth - 48, 48, "plant").setDepth(-10);
-    this.add.image(48, layout.worldHeight - 48, "plant").setDepth(-10);
-    this.add.image(layout.worldWidth - 48, layout.worldHeight - 48, "plant").setDepth(-10);
+    // Anchored to the office corners, not the world's — the world's corners
+    // are far out in the bleed area and would never be on screen.
+    const { content } = layout;
+    for (const [px, py] of [
+      [content.x + 40, content.y + 40],
+      [content.x + content.width - 40, content.y + 40],
+      [content.x + 40, content.y + content.height - 40],
+      [content.x + content.width - 40, content.y + content.height - 40],
+    ]) {
+      this.add.image(px, py, "plant").setDepth(-10);
+    }
 
     for (const room of layout.rooms) this.drawRoom(room);
   }
@@ -185,6 +234,36 @@ export class OfficeScene extends Phaser.Scene {
     g.fillRect(room.x + room.width - WALL_THICKNESS, room.y, WALL_THICKNESS, room.height);
 
     this.add.image(room.deskX, room.deskY, "desk").setDepth(-10).setScale(1.15);
+
+    // The agent dock: a lit server-rack style platform with one marked pad
+    // per slot, so it reads as "this is where this member's Claude Code
+    // terminals stand" even before any of them connect — and so a docked
+    // agent visibly lines up with a pad rather than floating on bare floor.
+    const bay = room.agentBay;
+    const dockGfx = this.add.graphics().setDepth(-11);
+    dockGfx.fillStyle(DOCK_COLOR, 0.08);
+    dockGfx.fillRoundedRect(bay.x, bay.y, bay.width, bay.height, 8);
+    dockGfx.lineStyle(1.5, DOCK_COLOR, 0.55);
+    dockGfx.strokeRoundedRect(bay.x, bay.y, bay.width, bay.height, 8);
+
+    for (let slot = 0; slot < AGENT_SLOT_COUNT; slot++) {
+      const pad = agentSlotPosition(room, slot);
+      dockGfx.fillStyle(DOCK_COLOR, 0.16);
+      dockGfx.fillEllipse(pad.x, pad.y + 8, 22, 9);
+      dockGfx.lineStyle(1, DOCK_COLOR, 0.5);
+      dockGfx.strokeEllipse(pad.x, pad.y + 8, 22, 9);
+    }
+
+    this.add
+      // Clear of the docked sprites, which stand ~18px proud of the bay.
+      .text(bay.x + bay.width / 2, bay.y - 24, "AGENT DOCK", {
+        ...TEXT_STYLE_BASE,
+        fontSize: "8px",
+        fontStyle: "bold",
+        color: "#7fd6ff",
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(-11);
 
     this.add
       .text(room.labelX, room.labelY, room.name, {
@@ -220,8 +299,12 @@ export class OfficeScene extends Phaser.Scene {
   private createAvatarEntity(input: AvatarInput): AvatarEntity {
     const container = this.add.container(input.x, input.y);
 
+    const isAgent = input.textureKey === AGENT_TEXTURE_KEY;
     const glow = this.add.ellipse(0, 2, 34, 12, 0x3dffb0, 0.35);
-    const sprite = this.add.image(0, -6, input.textureKey).setOrigin(0.5, 1).setScale(1.3);
+    const sprite = this.add
+      .image(0, -6, input.textureKey)
+      .setOrigin(0.5, 1)
+      .setScale(isAgent ? 0.8 : 1.3);
     const nameText = this.add
       .text(0, 8, input.name, {
         ...TEXT_STYLE_BASE,
@@ -239,10 +322,6 @@ export class OfficeScene extends Phaser.Scene {
       .setOrigin(0.5, 0);
 
     container.add([glow, sprite, nameText, ownerText, pathText]);
-
-    if (input.isSelf) {
-      this.cameras.main.startFollow(container, true, 0.12, 0.12);
-    }
 
     return { container, sprite, glow, nameText, ownerText, pathText, lastX: input.x, lastY: input.y };
   }

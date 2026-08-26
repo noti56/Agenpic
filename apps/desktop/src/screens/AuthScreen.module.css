@@ -309,16 +309,16 @@
 .inputTrailingBtn {
   position: absolute;
   right: 10px;
+  display: flex;
   background: none;
   border: none;
+  color: var(--agp-text-faint);
   cursor: pointer;
-  font-size: 14px;
-  opacity: 0.7;
-  filter: grayscale(1);
+  transition: color var(--agp-transition-fast);
 }
 
 .inputTrailingBtn:hover {
-  opacity: 1;
+  color: var(--agp-cyan);
 }
 
 .rememberRow {

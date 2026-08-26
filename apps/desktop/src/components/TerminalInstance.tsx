@@ -101,6 +101,12 @@ export function TerminalInstance({ cwd, onClaudeStatusChange }: TerminalInstance
     })();
 
     const resizeObserver = new ResizeObserver(() => {
+      const el = containerRef.current;
+      // Hidden inactive tabs collapse to 0x0 (their wrapper is `display:
+      // none`). Fitting against that would resize xterm down to 0 cols/rows
+      // and permanently wedge its renderer, so it never recovers when the
+      // tab is shown again. Skip fitting while there's no real size to fit.
+      if (!el || el.offsetWidth === 0 || el.offsetHeight === 0) return;
       fitAddon.fit();
       if (ptyIdRef.current) {
         invoke("pty_resize", {

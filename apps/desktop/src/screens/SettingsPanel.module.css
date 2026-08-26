@@ -54,11 +54,13 @@
 }
 
 .closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   color: var(--agp-text-dim);
   cursor: pointer;
-  font-size: 14px;
 }
 
 .closeBtn:hover {

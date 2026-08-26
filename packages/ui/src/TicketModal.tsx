@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { X } from "@phosphor-icons/react/X";
 import type { CommentRecord, TicketColumn, TicketRecord, UserRecord } from "@agenpic/types";
 import { Panel } from "./Panel";
 import styles from "./TicketModal.module.css";
@@ -95,7 +96,7 @@ export function TicketModal({
             }}
           />
           <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
-            ✕
+            <X size={16} weight="bold" />
           </button>
         </div>
 
@@ -265,7 +266,7 @@ export function TicketModal({
             onClick={() => setPreviewImage(null)}
             aria-label="Close preview"
           >
-            ✕
+            <X size={18} weight="bold" />
           </button>
           <img className={styles.lightboxImage} src={previewImage} alt="" />
         </div>

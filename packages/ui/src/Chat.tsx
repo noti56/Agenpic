@@ -9,6 +9,10 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
+// Deep-imported per icon (rather than the `@phosphor-icons/react` barrel)
+// so consumers of this package only pull in the icons actually used here.
+import { ChatCircle } from "@phosphor-icons/react/ChatCircle";
+import { Flag } from "@phosphor-icons/react/Flag";
 import type { MessageRecord, UserRecord } from "@agenpic/types";
 import styles from "./Chat.module.css";
 
@@ -129,7 +133,7 @@ export function ChatPanel({ messages, currentUserId, onSend, onToggleFlag }: Cha
         {messages.length === 0 && (
           <div className={styles.empty}>
             <span className={styles.emptyIcon} aria-hidden="true">
-              💬
+              <ChatCircle size={32} />
             </span>
             <p className={styles.emptyTitle}>No messages yet</p>
             <p className={styles.emptyHint}>Say hi to the team to get things started.</p>
@@ -176,7 +180,7 @@ export function ChatPanel({ messages, currentUserId, onSend, onToggleFlag }: Cha
                   >
                     {m.flagged && (
                       <span className={styles.flagBadge} title="Flagged">
-                        🚩
+                        <Flag size={12} weight="fill" />
                       </span>
                     )}
                     <span className={styles.bubbleText}>{m.text}</span>

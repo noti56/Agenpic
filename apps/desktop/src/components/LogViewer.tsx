@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { X } from "@phosphor-icons/react/X";
 import type { LogEntry } from "@agenpic/logger";
 import { onLogsChange, onLogViewerOpenChange, setLogViewerOpen } from "../lib/logger";
 import styles from "./LogViewer.module.css";
@@ -28,7 +29,7 @@ export function LogViewer() {
             Clear
           </button>
           <button className={styles.iconBtn} onClick={() => setLogViewerOpen(false)} aria-label="Close">
-            ✕
+            <X size={14} weight="bold" />
           </button>
         </div>
       </div>

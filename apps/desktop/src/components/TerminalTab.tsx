@@ -21,6 +21,11 @@ interface TerminalTabProps {
  * down automatically when `claude` exits or the tab closes. Carries the
  * owning human's display name in `meta.owner` so teammates can tell whose
  * agent is whose on the map.
+ *
+ * Where the node *appears* is decided by the map, not here: PresenceMap
+ * docks every agent onto a pad in its owner's room (see `agentPlacements`),
+ * since only it can see all of a member's agents at once and hand out
+ * non-overlapping spots.
  */
 export function TerminalTab({ tabId, cwd, projectId, userId, ownerName, active }: TerminalTabProps) {
   const [running, setRunning] = useState(false);

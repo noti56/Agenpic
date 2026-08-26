@@ -47,6 +47,9 @@
 }
 
 .iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   color: var(--agp-text-faint);

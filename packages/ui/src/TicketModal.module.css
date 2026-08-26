@@ -72,11 +72,13 @@
 }
 
 .closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   color: var(--agp-text-dim);
   cursor: pointer;
-  font-size: 16px;
   padding: 4px;
 }
 
@@ -197,13 +199,15 @@
   position: absolute;
   top: 24px;
   right: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(16, 16, 28, 0.8);
   border: 1px solid var(--agp-border);
   color: var(--agp-text);
   border-radius: 50%;
   width: 36px;
   height: 36px;
-  font-size: 16px;
   cursor: pointer;
 }
 

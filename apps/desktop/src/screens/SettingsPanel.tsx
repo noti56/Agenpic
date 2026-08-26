@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { X } from "@phosphor-icons/react/X";
 import { Button, Panel, TextInput } from "@agenpic/ui";
 import { getOllamaConfig, saveOllamaConfig, testOllamaConnection } from "../lib/ollama";
 import styles from "./SettingsPanel.module.css";
@@ -38,7 +39,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
         <div className={styles.header}>
           <h2 className={styles.title}>Settings</h2>
           <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
-            ✕
+            <X size={16} weight="bold" />
           </button>
         </div>
 

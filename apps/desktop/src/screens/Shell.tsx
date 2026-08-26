@@ -1,16 +1,30 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Button } from "@agenpic/ui";
+// Deep-imported per icon (rather than the `@phosphor-icons/react` barrel)
+// so the bundle only includes the handful of icons actually used here — the
+// barrel re-exports the entire ~2000-icon set in a way Rollup couldn't
+// tree-shake, which bloated the build by ~1MB when tried.
+import { ChatCircle } from "@phosphor-icons/react/ChatCircle";
+import { FileText } from "@phosphor-icons/react/FileText";
+import { Gear } from "@phosphor-icons/react/Gear";
+import { Kanban } from "@phosphor-icons/react/Kanban";
+import { MapTrifold } from "@phosphor-icons/react/MapTrifold";
+import { ListBullets } from "@phosphor-icons/react/ListBullets";
+import { Terminal as TerminalIcon } from "@phosphor-icons/react/Terminal";
+import { Users } from "@phosphor-icons/react/Users";
 import { useProjectContext } from "../state/ProjectContext";
 import { useEffectiveRole } from "../hooks/useEffectiveRole";
 import { useLocalProjectPath } from "../hooks/useLocalProjectPath";
 import { useAgenpicCliConfig } from "../hooks/useAgenpicCliConfig";
+import { useWorkspaceLayout, type PanelId } from "../hooks/useWorkspaceLayout";
 import { toggleLogViewer } from "../lib/logger";
+import { ActivityBar, type ActivityBarItem } from "../components/ActivityBar";
+import { WorkspacePane } from "../components/WorkspacePane";
 import { TerminalPanel } from "../components/TerminalPanel";
 import { MissionHangarPanel } from "../components/MissionHangarPanel";
 import { ChatPanel } from "../components/ChatPanel";
 
-// Phaser (~1MB) / the markdown editor are only needed once their tabs are
-// actually visited — code-split them out of the main bundle instead of
+// Phaser (~1MB) / the markdown editor are only needed once their panels are
+// actually opened — code-split them out of the main bundle instead of
 // paying that parse/init cost on every app launch.
 const PresenceMap = lazy(() => import("../components/PresenceMap").then((m) => ({ default: m.PresenceMap })));
 const DocsPanel = lazy(() => import("../components/DocsPanel").then((m) => ({ default: m.DocsPanel })));
@@ -19,11 +33,24 @@ import { SettingsPanel } from "./SettingsPanel";
 import { ProjectPathSetup } from "./ProjectPathSetup";
 import styles from "./Shell.module.css";
 
-type Tab = "terminal" | "hangar" | "map" | "chat" | "docs";
+const ACTIVITY_ITEMS: ActivityBarItem[] = [
+  { id: "terminal", label: "Terminal", icon: <TerminalIcon size={24} /> },
+  { id: "hangar", label: "Mission Hangar", icon: <Kanban size={24} /> },
+  { id: "map", label: "Map", icon: <MapTrifold size={24} /> },
+  { id: "chat", label: "Chat", icon: <ChatCircle size={24} /> },
+  { id: "docs", label: "Docs", icon: <FileText size={24} /> },
+];
+
+const PANEL_TITLES: Record<PanelId, string> = {
+  terminal: "Terminal",
+  hangar: "Mission Hangar",
+  map: "Map",
+  chat: "Chat",
+  docs: "Docs",
+};
 
 export function Shell() {
   const { activeProject, selectProject } = useProjectContext();
-  const [tab, setTab] = useState<Tab>("terminal");
   const [showMembers, setShowMembers] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPathSetup, setShowPathSetup] = useState(false);
@@ -40,6 +67,8 @@ export function Shell() {
   const needsPathSetup = !isOwner && !isRoleLoading && !isPathLoading && !localPath;
 
   useAgenpicCliConfig(activeProject?.id, projectPath);
+
+  const { activePanel, select, close } = useWorkspaceLayout(activeProject?.id ?? "");
 
   // Global "~" shortcut to toggle the log panel, like a game/dev console —
   // skipped while typing in the terminal or any input so `~` still types
@@ -86,78 +115,73 @@ export function Shell() {
           <span className={styles.roleBadge}>{role}</span>
         </div>
 
-        <nav className={styles.tabs}>
-          <button
-            className={[styles.tab, tab === "terminal" ? styles.tabActive : ""].join(" ")}
-            onClick={() => setTab("terminal")}
-          >
-            Terminal
-          </button>
-          <button
-            className={[styles.tab, tab === "hangar" ? styles.tabActive : ""].join(" ")}
-            onClick={() => setTab("hangar")}
-          >
-            Mission Hangar
-          </button>
-          <button
-            className={[styles.tab, tab === "map" ? styles.tabActive : ""].join(" ")}
-            onClick={() => setTab("map")}
-          >
-            Map
-          </button>
-          <button
-            className={[styles.tab, tab === "chat" ? styles.tabActive : ""].join(" ")}
-            onClick={() => setTab("chat")}
-          >
-            Chat
-          </button>
-          <button
-            className={[styles.tab, tab === "docs" ? styles.tabActive : ""].join(" ")}
-            onClick={() => setTab("docs")}
-          >
-            Docs
-          </button>
-        </nav>
-
         <div className={styles.headerRight}>
           {!isOwner && (
-            <Button variant="ghost" onClick={() => setShowPathSetup(true)}>
-              Change Folder
-            </Button>
+            <button className={styles.iconBtn} onClick={() => setShowPathSetup(true)} title="Change Folder">
+              <FileText size={17} />
+            </button>
           )}
-          <Button variant="ghost" onClick={() => setShowSettings(true)}>
-            Settings
-          </Button>
-          <Button variant="ghost" onClick={() => setShowMembers(true)}>
-            Members
-          </Button>
-          <Button variant="ghost" onClick={toggleLogViewer} title="Toggle logs (~)">
-            Logs
-          </Button>
+          <button className={styles.iconBtn} onClick={() => setShowSettings(true)} title="Settings">
+            <Gear size={17} />
+          </button>
+          <button className={styles.iconBtn} onClick={() => setShowMembers(true)} title="Members">
+            <Users size={17} />
+          </button>
+          <button className={styles.iconBtn} onClick={toggleLogViewer} title="Toggle logs (~)">
+            <ListBullets size={17} />
+          </button>
         </div>
       </header>
 
-      <main className={styles.main}>
-        <div style={{ display: tab === "terminal" ? "block" : "none", height: "100%" }}>
-          <TerminalPanel cwd={projectPath} projectId={activeProject.id} />
-        </div>
-        <div style={{ display: tab === "hangar" ? "block" : "none", height: "100%" }}>
-          <MissionHangarPanel project={activeProject} role={role} />
-        </div>
-        <div style={{ display: tab === "map" ? "block" : "none", height: "100%" }}>
-          <Suspense fallback={null}>
-            <PresenceMap project={activeProject} />
-          </Suspense>
-        </div>
-        <div style={{ display: tab === "chat" ? "block" : "none", height: "100%" }}>
-          <ChatPanel projectId={activeProject.id} />
-        </div>
-        <div style={{ display: tab === "docs" ? "block" : "none", height: "100%" }}>
-          <Suspense fallback={null}>
-            <DocsPanel projectId={activeProject.id} role={role} />
-          </Suspense>
-        </div>
-      </main>
+      <div className={styles.body}>
+        <ActivityBar items={ACTIVITY_ITEMS} activePanel={activePanel} onSelect={select} />
+
+        <main className={styles.main}>
+          <div style={{ display: activePanel === "terminal" ? "flex" : "none", height: "100%" }}>
+            <WorkspacePane title={PANEL_TITLES.terminal} onClose={close}>
+              <TerminalPanel cwd={projectPath} projectId={activeProject.id} />
+            </WorkspacePane>
+          </div>
+
+          <div style={{ display: activePanel === "hangar" ? "flex" : "none", height: "100%" }}>
+            <WorkspacePane title={PANEL_TITLES.hangar} onClose={close}>
+              <MissionHangarPanel project={activeProject} role={role} />
+            </WorkspacePane>
+          </div>
+
+          <div style={{ display: activePanel === "map" ? "flex" : "none", height: "100%" }}>
+            <WorkspacePane title={PANEL_TITLES.map} onClose={close}>
+              <Suspense fallback={null}>
+                <PresenceMap project={activeProject} active={activePanel === "map"} />
+              </Suspense>
+            </WorkspacePane>
+          </div>
+
+          <div style={{ display: activePanel === "chat" ? "flex" : "none", height: "100%" }}>
+            <WorkspacePane title={PANEL_TITLES.chat} onClose={close}>
+              <ChatPanel projectId={activeProject.id} />
+            </WorkspacePane>
+          </div>
+
+          <div style={{ display: activePanel === "docs" ? "flex" : "none", height: "100%" }}>
+            <WorkspacePane title={PANEL_TITLES.docs} onClose={close}>
+              <Suspense fallback={null}>
+                <DocsPanel projectId={activeProject.id} role={role} />
+              </Suspense>
+            </WorkspacePane>
+          </div>
+
+          {!activePanel && (
+            <div className={styles.emptyWorkspace}>
+              <div className={styles.emptyWordmark}>
+                <span className={styles.emptyCyan}>AGEN</span>
+                <span className={styles.emptyMagenta}>PIC</span>
+              </div>
+              <p className={styles.emptyHint}>Select a panel from the left to get started</p>
+            </div>
+          )}
+        </main>
+      </div>
 
       {showMembers && (
         <MembersPanel project={activeProject} isOwner={isOwner} onClose={() => setShowMembers(false)} />

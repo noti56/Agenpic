@@ -115,7 +115,8 @@
 }
 
 .emptyIcon {
-  font-size: 32px;
+  display: flex;
+  color: var(--agp-text-faint);
   opacity: 0.8;
 }
 

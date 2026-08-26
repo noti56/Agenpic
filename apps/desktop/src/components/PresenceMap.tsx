@@ -8,11 +8,14 @@ import { useAuth } from "../state/AuthContext";
 import { HeroPicker } from "./HeroPicker";
 import { AGENT_TEXTURE_KEY, loadStoredHero, resolveHero, storeHero } from "./sprites/heroDefs";
 import { OfficeScene, type AvatarInput } from "./map/OfficeScene";
-import { computeOfficeLayout } from "./map/officeLayout";
+import { agentSlotPosition, computeOfficeLayout } from "./map/officeLayout";
+import type { PeerState } from "../lib/presenceTypes";
 import styles from "./PresenceMap.module.css";
 
 interface PresenceMapProps {
   project: ProjectRecord;
+  /** Whether the Map tab is the one currently shown (vs. mounted-but-hidden). */
+  active: boolean;
 }
 
 function colorForId(id: string): string {
@@ -22,7 +25,7 @@ function colorForId(id: string): string {
   return `hsl(${hue}, 85%, 60%)`;
 }
 
-export function PresenceMap({ project }: PresenceMapProps) {
+export function PresenceMap({ project, active }: PresenceMapProps) {
   const { user } = useAuth();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -110,16 +113,66 @@ export function PresenceMap({ project }: PresenceMapProps) {
     sceneRef.current?.setLayout(layout);
   }, [layout]);
 
+  // This panel is always mounted (see the mount effect's comment below), so
+  // a `display:none -> block` tab switch doesn't necessarily fire the
+  // ResizeObserver in every webview reliably/promptly. Force a resize using
+  // the container's now-current size the moment the tab actually becomes
+  // visible, rather than depending solely on that observer.
+  useEffect(() => {
+    if (!active) return;
+    const container = containerRef.current;
+    const game = gameRef.current;
+    const scene = sceneRef.current;
+    if (!container || !game || !scene) return;
+    const { clientWidth, clientHeight } = container;
+    if (clientWidth > 0 && clientHeight > 0) {
+      game.scale.resize(clientWidth, clientHeight);
+      scene.setViewportSize(clientWidth, clientHeight);
+    }
+  }, [active]);
+
   // Spawn at your own room's desk the first time your room is known,
   // instead of an arbitrary fixed point — after that, position is yours to
-  // walk around with (click-to-move), so this only ever runs once.
+  // walk around with (click-to-move), so this only ever runs once. Also
+  // broadcast it via `move()` (not just local state), otherwise other
+  // clients keep seeing the random spawn point the server assigned you on
+  // connect until you make your first real click-to-move.
   useEffect(() => {
     if (hasSpawnedRef.current || !user) return;
     const ownRoom = layout.rooms.find((r) => r.userId === user.id);
     if (!ownRoom) return;
     hasSpawnedRef.current = true;
     setSelfPos({ x: ownRoom.deskX, y: ownRoom.deskY });
-  }, [layout, user]);
+    move(ownRoom.deskX, ownRoom.deskY);
+  }, [layout, user, move]);
+
+  // Agent nodes stand on their owner's dock rather than wherever they were
+  // spawned. Derived here, on the map, instead of being broadcast by each
+  // terminal: only the map sees *all* of a member's agents at once, so it
+  // can hand out one pad each with no collisions. Sorting by socketId keeps
+  // every client's assignment identical without any coordination.
+  const agentPlacements = useMemo(() => {
+    const byOwner = new Map<string, PeerState[]>();
+    for (const peer of peers) {
+      if (peer.kind !== "agent") continue;
+      const ownerId = peer.userId.split(":agent:")[0];
+      const existing = byOwner.get(ownerId);
+      if (existing) existing.push(peer);
+      else byOwner.set(ownerId, [peer]);
+    }
+
+    const placements = new Map<string, { x: number; y: number; index: number; total: number }>();
+    for (const [ownerId, owned] of byOwner) {
+      const room = layout.rooms.find((r) => r.userId === ownerId);
+      if (!room) continue; // not a project member — leave it where it is
+      [...owned]
+        .sort((a, b) => a.socketId.localeCompare(b.socketId))
+        .forEach((peer, i) =>
+          placements.set(peer.socketId, { ...agentSlotPosition(room, i), index: i, total: owned.length }),
+        );
+    }
+    return placements;
+  }, [peers, layout]);
 
   useEffect(() => {
     if (!user) return;
@@ -135,23 +188,33 @@ export function PresenceMap({ project }: PresenceMapProps) {
       },
       ...peers.map((peer): AvatarInput => {
         const isAgent = peer.kind === "agent";
+        const docked = isAgent ? agentPlacements.get(peer.socketId) : undefined;
         return {
           id: peer.socketId,
-          x: peer.x,
-          y: peer.y,
+          x: docked?.x ?? peer.x,
+          y: docked?.y ?? peer.y,
           textureKey: isAgent
             ? AGENT_TEXTURE_KEY
             : resolveHero(peer.meta?.hero, peer.userId).textureKey,
-          name: peer.name,
-          ownerLabel: isAgent ? peer.meta?.owner : undefined,
-          pathLabel: isAgent ? peer.meta?.path?.split(/[\\/]/).filter(Boolean).pop() : undefined,
+          // A docked agent already sits inside its owner's room, so the
+          // owner and project-path lines are redundant there — and three of
+          // them side by side on one dock overlap into mush. Keep the full
+          // labels only for an agent that couldn't be docked.
+          name: docked
+            ? docked.total > 1
+              ? `claude ${docked.index + 1}`
+              : "claude"
+            : peer.name,
+          ownerLabel: isAgent && !docked ? peer.meta?.owner : undefined,
+          pathLabel:
+            isAgent && !docked ? peer.meta?.path?.split(/[\\/]/).filter(Boolean).pop() : undefined,
           connected: proximity.connectedPeerIds.has(peer.socketId),
           isSelf: false,
         };
       }),
     ];
     sceneRef.current?.syncAvatars(avatars);
-  }, [user, selfPos, selfHero.textureKey, peers, proximity.connectedPeerIds]);
+  }, [user, selfPos, selfHero.textureKey, peers, proximity.connectedPeerIds, agentPlacements]);
 
   const handleHeroSelect = (id: string) => {
     setHeroId(id);

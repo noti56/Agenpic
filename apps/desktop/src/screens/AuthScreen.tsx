@@ -1,55 +1,26 @@
 import { useState, type FormEvent } from "react";
+// Deep-imported per icon (see the matching note in screens/Shell.tsx) so
+// the bundle only includes the handful of icons actually used here.
+import { Terminal } from "@phosphor-icons/react/Terminal";
+import { Kanban } from "@phosphor-icons/react/Kanban";
+import { MapTrifold } from "@phosphor-icons/react/MapTrifold";
+import { ChatCircle } from "@phosphor-icons/react/ChatCircle";
+import { VideoCamera } from "@phosphor-icons/react/VideoCamera";
+import { EnvelopeSimple } from "@phosphor-icons/react/EnvelopeSimple";
+import { Lock } from "@phosphor-icons/react/Lock";
+import { Eye } from "@phosphor-icons/react/Eye";
+import { EyeSlash } from "@phosphor-icons/react/EyeSlash";
 import { useSystemStatus } from "../hooks/useSystemStatus";
 import { useAuth } from "../state/AuthContext";
 import styles from "./AuthScreen.module.css";
 
 const FEATURES = [
-  { icon: "terminalIcon", title: "Real Terminal", subtitle: "Full terminal access to your environment" },
-  { icon: "hangarIcon", title: "Mission Hangar", subtitle: "Plan, track, and ship with your team" },
-  { icon: "mapIcon", title: "Presence Map", subtitle: "See your team and AI agents in real-time" },
-  { icon: "chatIcon", title: "Team Chat", subtitle: "Discuss, share, and solve together" },
-  { icon: "voiceIcon", title: "Voice & Video", subtitle: "Jump on a call, zero context switching" },
+  { icon: Terminal, title: "Real Terminal", subtitle: "Full terminal access to your environment" },
+  { icon: Kanban, title: "Mission Hangar", subtitle: "Plan, track, and ship with your team" },
+  { icon: MapTrifold, title: "Presence Map", subtitle: "See your team and AI agents in real-time" },
+  { icon: ChatCircle, title: "Team Chat", subtitle: "Discuss, share, and solve together" },
+  { icon: VideoCamera, title: "Voice & Video", subtitle: "Jump on a call, zero context switching" },
 ] as const;
-
-function FeatureIcon({ kind }: { kind: (typeof FEATURES)[number]["icon"] }) {
-  switch (kind) {
-    case "terminalIcon":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect x="3" y="4" width="18" height="16" rx="2" />
-          <path d="M7 9l3 3-3 3M13 15h4" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      );
-    case "hangarIcon":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect x="3" y="4" width="18" height="16" rx="2" />
-          <path d="M9 4v16M15 4v16" />
-        </svg>
-      );
-    case "mapIcon":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="8" cy="9" r="2.5" />
-          <circle cx="16" cy="9" r="2.5" />
-          <path d="M4 19c0-2.5 2-4.5 4-4.5s4 2 4 4.5M12 19c0-2.5 2-4.5 4-4.5s4 2 4 4.5" strokeLinecap="round" />
-        </svg>
-      );
-    case "chatIcon":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M4 5h16v11H8l-4 4V5z" strokeLinejoin="round" />
-        </svg>
-      );
-    case "voiceIcon":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect x="3" y="7" width="12" height="10" rx="2" />
-          <path d="M15 10l6-3v10l-6-3" strokeLinejoin="round" />
-        </svg>
-      );
-  }
-}
 
 export function AuthScreen() {
   const { login, signup, isLoading } = useAuth();
@@ -100,7 +71,7 @@ export function AuthScreen() {
           {FEATURES.map((f) => (
             <li key={f.title} className={styles.featureItem}>
               <span className={styles.featureIcon}>
-                <FeatureIcon kind={f.icon} />
+                <f.icon size={18} />
               </span>
               <div>
                 <div className={styles.featureTitle}>{f.title}</div>
@@ -166,10 +137,7 @@ export function AuthScreen() {
               <span className={styles.fieldLabel}>Email</span>
               <div className={styles.inputWrap}>
                 <span className={styles.inputIcon} aria-hidden>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="8" r="4" />
-                    <path d="M4 20c0-4 3.5-6 8-6s8 2 8 6" strokeLinecap="round" />
-                  </svg>
+                  <EnvelopeSimple size={15} />
                 </span>
                 <input
                   className={styles.inputWithIcon}
@@ -186,10 +154,7 @@ export function AuthScreen() {
               <span className={styles.fieldLabel}>Password</span>
               <div className={styles.inputWrap}>
                 <span className={styles.inputIcon} aria-hidden>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="5" y="11" width="14" height="9" rx="2" />
-                    <path d="M8 11V8a4 4 0 118 0v3" />
-                  </svg>
+                  <Lock size={15} />
                 </span>
                 <input
                   className={styles.inputWithIcon}
@@ -206,7 +171,7 @@ export function AuthScreen() {
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? "🙈" : "👁"}
+                  {showPassword ? <EyeSlash size={15} /> : <Eye size={15} />}
                 </button>
               </div>
             </label>

@@ -12,6 +12,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Paperclip } from "@phosphor-icons/react/Paperclip";
 import type { TicketColumn, TicketRecord, UserRecord } from "@agenpic/types";
 import styles from "./MissionHangar.module.css";
 
@@ -264,7 +265,11 @@ function HangarCard({
       {ticket.description && <div className={styles.cardDesc}>{ticket.description}</div>}
       <div className={styles.cardFooter}>
         <div className={styles.cardBadges}>
-          {!!ticket.images?.length && <span className={styles.cardBadge}>📎 {ticket.images.length}</span>}
+          {!!ticket.images?.length && (
+            <span className={styles.cardBadge}>
+              <Paperclip size={12} /> {ticket.images.length}
+            </span>
+          )}
         </div>
         {owner && (
           <span className={styles.ownerAvatar} title={owner.name || owner.email}>

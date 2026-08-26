@@ -4,6 +4,7 @@ import Editor from "@toast-ui/editor";
 import Viewer from "@toast-ui/editor/dist/toastui-editor-viewer";
 import "@toast-ui/editor/toastui-editor.css";
 import "@toast-ui/editor/toastui-editor-dark.css";
+import { FileText } from "@phosphor-icons/react/FileText";
 import type { DocRecord } from "@agenpic/types";
 import styles from "./Docs.module.css";
 
@@ -64,7 +65,7 @@ export function DocsPanel({ docs, canEdit, onCreate, onUpdate, onDelete }: DocsP
         {!selected && (
           <div className={styles.emptyState}>
             <span className={styles.emptyIcon} aria-hidden="true">
-              📄
+              <FileText size={32} />
             </span>
             <p className={styles.emptyTitle}>{docs.length === 0 ? "No docs yet" : "Select a doc"}</p>
             {canEdit && (
