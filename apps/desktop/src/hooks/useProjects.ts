@@ -1,10 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { invoke } from "@tauri-apps/api/core";
 import { client } from "../lib/pocketbase";
 import { useAuth } from "../state/AuthContext";
-import { getLogger } from "../lib/logger";
-
-const log = getLogger("project-scaffold");
 
 export function useProjects() {
   const { user } = useAuth();
@@ -21,13 +17,10 @@ export function useCreateProject() {
   return useMutation({
     mutationFn: async ({ name, path }: { name: string; path: string }) => {
       if (!user) throw new Error("Not authenticated");
-      const project = await client.projects.create({ name, path, owner: user.id });
-      try {
-        await invoke("scaffold_project", { projectPath: path });
-      } catch (err) {
-        log.error("scaffold_project failed", err);
-      }
-      return project;
+      // Scaffolding the CLI/AGENPIC.md/CLAUDE.md pointer deliberately does
+      // *not* happen here — it runs on every project open instead, so
+      // teammates and pre-existing projects get it too. See useProjectScaffold.
+      return client.projects.create({ name, path, owner: user.id });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["projects"] }),
   });

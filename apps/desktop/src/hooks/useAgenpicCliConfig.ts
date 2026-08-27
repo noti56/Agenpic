@@ -22,6 +22,10 @@ export function useAgenpicCliConfig(projectId: string | undefined, projectPath: 
         pocketbaseUrl: POCKETBASE_URL,
         projectId,
         token: client.pb.authStore.token,
+        // ticket_comments.user is a required relation, so the CLI needs to
+        // know which account it posts as — it cannot derive that from the
+        // bearer token alone without an extra round trip.
+        userId: client.currentUser?.id ?? null,
       });
       try {
         await invoke("write_agenpic_config", { projectPath, configJson });

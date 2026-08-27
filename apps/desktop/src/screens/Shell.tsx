@@ -15,6 +15,7 @@ import { useProjectContext } from "../state/ProjectContext";
 import { useEffectiveRole } from "../hooks/useEffectiveRole";
 import { useLocalProjectPath } from "../hooks/useLocalProjectPath";
 import { useAgenpicCliConfig } from "../hooks/useAgenpicCliConfig";
+import { useProjectScaffold } from "../hooks/useProjectScaffold";
 import { useWorkspaceLayout, type PanelId } from "../hooks/useWorkspaceLayout";
 import { toggleLogViewer } from "../lib/logger";
 import { ActivityBar, type ActivityBarItem } from "../components/ActivityBar";
@@ -66,6 +67,7 @@ export function Shell() {
   const projectPath = isOwner ? activeProject?.path : (localPath ?? undefined);
   const needsPathSetup = !isOwner && !isRoleLoading && !isPathLoading && !localPath;
 
+  useProjectScaffold(projectPath);
   useAgenpicCliConfig(activeProject?.id, projectPath);
 
   const { activePanel, select, close } = useWorkspaceLayout(activeProject?.id ?? "");
