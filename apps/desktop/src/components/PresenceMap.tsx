@@ -6,7 +6,7 @@ import { useProximityVoice } from "../hooks/useProximityVoice";
 import { useProjectRoster } from "../hooks/useProjectRoster";
 import { useAuth } from "../state/AuthContext";
 import { HeroPicker } from "./HeroPicker";
-import { AGENT_TEXTURE_KEY, loadStoredHero, resolveHero, storeHero } from "./sprites/heroDefs";
+import { agentTextureForAccent, loadStoredHero, resolveHero, storeHero } from "./sprites/heroDefs";
 import { OfficeScene, type AvatarInput } from "./map/OfficeScene";
 import { agentSlotPosition, computeOfficeLayout } from "./map/officeLayout";
 import type { PeerState } from "../lib/presenceTypes";
@@ -79,7 +79,12 @@ export function PresenceMap({ project, active }: PresenceMapProps) {
         width: Math.max(container.clientWidth, 1),
         height: Math.max(container.clientHeight, 1),
       },
-      render: { pixelArt: true, antialias: false },
+      // Not pixelArt: the office props are vector primitives, the character
+      // sprites are shaded art, and the glow/floor/vignette textures are
+      // gradients — every one of them wants smoothing. pixelArt forces
+      // NEAREST globally, which the camera's fractional fit-zoom then turns
+      // into crawling sprite edges and mushy text.
+      render: { antialias: true, roundPixels: false },
       scene: [scene],
     });
     gameRef.current = game;
@@ -174,6 +179,14 @@ export function PresenceMap({ project, active }: PresenceMapProps) {
     return placements;
   }, [peers, layout]);
 
+  // An avatar's neon takes the accent of the room it belongs to, so a
+  // docked agent's ring/antenna matches the walls and nameplate around it
+  // rather than being one more unrelated colour on screen.
+  const accentByUser = useMemo(
+    () => new Map(layout.rooms.map((room) => [room.userId, room.accent])),
+    [layout],
+  );
+
   useEffect(() => {
     if (!user) return;
     const avatars: AvatarInput[] = [
@@ -185,26 +198,26 @@ export function PresenceMap({ project, active }: PresenceMapProps) {
         name: `${user.name || user.email} (you)`,
         connected: true,
         isSelf: true,
+        accent: accentByUser.get(user.id),
       },
       ...peers.map((peer): AvatarInput => {
         const isAgent = peer.kind === "agent";
         const docked = isAgent ? agentPlacements.get(peer.socketId) : undefined;
+        const ownerId = isAgent ? peer.userId.split(":agent:")[0] : peer.userId;
         return {
           id: peer.socketId,
           x: docked?.x ?? peer.x,
           y: docked?.y ?? peer.y,
+          accent: accentByUser.get(ownerId),
+          docked: !!docked,
           textureKey: isAgent
-            ? AGENT_TEXTURE_KEY
+            ? agentTextureForAccent(accentByUser.get(ownerId))
             : resolveHero(peer.meta?.hero, peer.userId).textureKey,
           // A docked agent already sits inside its owner's room, so the
-          // owner and project-path lines are redundant there — and three of
-          // them side by side on one dock overlap into mush. Keep the full
-          // labels only for an agent that couldn't be docked.
-          name: docked
-            ? docked.total > 1
-              ? `claude ${docked.index + 1}`
-              : "claude"
-            : peer.name,
+          // owner and project-path lines are redundant there. The pads are
+          // only ~35px apart, so a second docked agent drops to its slot
+          // number alone — "claude 2" beside "claude 3" overlaps into mush.
+          name: docked ? (docked.total > 1 ? `${docked.index + 1}` : "claude") : peer.name,
           ownerLabel: isAgent && !docked ? peer.meta?.owner : undefined,
           pathLabel:
             isAgent && !docked ? peer.meta?.path?.split(/[\\/]/).filter(Boolean).pop() : undefined,
@@ -214,7 +227,7 @@ export function PresenceMap({ project, active }: PresenceMapProps) {
       }),
     ];
     sceneRef.current?.syncAvatars(avatars);
-  }, [user, selfPos, selfHero.textureKey, peers, proximity.connectedPeerIds, agentPlacements]);
+  }, [user, selfPos, selfHero.textureKey, peers, proximity.connectedPeerIds, agentPlacements, accentByUser]);
 
   const handleHeroSelect = (id: string) => {
     setHeroId(id);

@@ -22,6 +22,7 @@ export interface RoomDef {
   doorWidth: number;
   deskX: number;
   deskY: number;
+  /** Centre of the wall-mounted nameplate, on the room's back wall (opposite the door). */
   labelX: number;
   labelY: number;
   accent: number;
@@ -46,18 +47,41 @@ export interface OfficeLayout {
 
 const TILE = 64;
 const ROOM_ROWS = 4;
-const MIN_ROOM_COLS = 4;
+/**
+ * Five columns is the narrowest a room can be and still fit a desk beside a
+ * four-pad agent dock without the docked robots touching each other.
+ */
+const MIN_ROOM_COLS = 5;
 const MAX_ROOM_COLS = 8;
 const CORRIDOR = 2;
 const MEETING_ROWS = 5;
 const DOOR_WIDTH = TILE * 1.5;
 
 /**
- * Keeps the office roughly screen-shaped for small teams. Without it a
- * two-person roster lays out as a 1-room-wide, 17-row-tall column, which
- * fit-to-view then shrinks to a narrow strip using ~30% of a typical panel.
+ * Wall thickness. The "neon grid office" look wants walls solid enough to
+ * carry a lit top face plus an inner shadow (see OfficeScene.drawRoom) — a
+ * hairline rectangle outline reads as a diagram, not a building.
  */
-const MIN_CONTENT_COLS = 26;
+export const WALL_THICKNESS = 18;
+
+/** Depth of the darker south-facing strip that gives each wall its top-face relief. */
+export const WALL_CAP = 6;
+
+/** Width of the lit pillar block capping each side of a doorway. */
+export const DOOR_PILLAR = 14;
+
+/**
+ * The column budget rooms are sized against: rooms get narrower as more of
+ * them have to share a row, down to MIN_ROOM_COLS. This is not the office's
+ * width — that follows from how many rooms actually get placed.
+ */
+const ROOM_COLS_BUDGET = 26;
+
+/**
+ * Floor the office's width, so a one- or two-person team still has a meeting
+ * zone with room around it rather than a corridor-width strip.
+ */
+const MIN_CONTENT_COLS = 16;
 
 /**
  * Floor drawn beyond the office on every side, as a fraction of the office's
@@ -103,9 +127,16 @@ export function computeOfficeLayout(roster: RosterEntry[]): OfficeLayout {
 
   // Rooms stretch to share the floor when the team is small and settle to a
   // floor size as it grows — so the office fills its space either way.
-  const roomCols = clamp(Math.floor(MIN_CONTENT_COLS / perRow) - 1, MIN_ROOM_COLS, MAX_ROOM_COLS);
+  const roomCols = clamp(Math.floor(ROOM_COLS_BUDGET / perRow) - 1, MIN_ROOM_COLS, MAX_ROOM_COLS);
+  // The office is only as wide as the rooms it actually holds. Fixing it at
+  // a large width instead left a small team's rooms marooned in the middle
+  // of a mostly empty floor.
   const contentCols = Math.max(MIN_CONTENT_COLS, perRow * (roomCols + 1) + 1);
-  const contentRows = ROOM_ROWS * 2 + CORRIDOR * 2 + MEETING_ROWS;
+  // Likewise the height: with one or two people everyone fits in the top
+  // row, and reserving the bottom row anyway left a quarter of the map as
+  // permanently blank floor below the meeting zone.
+  const roomBands = bottomCount > 0 ? 2 : 1;
+  const contentRows = ROOM_ROWS * roomBands + CORRIDOR * 2 + MEETING_ROWS;
 
   const contentWidth = contentCols * TILE;
   const contentHeight = contentRows * TILE;
@@ -141,7 +172,11 @@ export function computeOfficeLayout(roster: RosterEntry[]): OfficeLayout {
       const roomX = content.x + gap * (i + 1) + width * i;
       const accent = ACCENTS[hashSeed(member.userId) % ACCENTS.length];
       const deskX = roomX + width * 0.27;
-      const deskY = isTop ? roomY + height * 0.36 : roomY + height * 0.64;
+      // Where the occupant *stands* — not where the desk is drawn. Avatar
+      // sprites are bottom-anchored and ~56px tall, so a spawn point on the
+      // desk itself buries the furniture; OfficeScene draws the desk a
+      // sprite-height further toward the back wall from here.
+      const deskY = isTop ? roomY + height * 0.6 : roomY + height * 0.4;
       const bayWidth = width * 0.44;
       const bayHeight = 46;
 
@@ -157,11 +192,14 @@ export function computeOfficeLayout(roster: RosterEntry[]): OfficeLayout {
         doorWidth: DOOR_WIDTH,
         deskX,
         deskY,
-        labelX: roomX + width / 2,
-        labelY: isTop ? roomY + height + 6 : roomY - 18,
+        // Mounted on the back wall (the one without the door), directly over
+        // the desk — like the lit nameplate screens in the reference art,
+        // rather than floating on the corridor floor outside the room.
+        labelX: deskX,
+        labelY: isTop ? roomY + WALL_THICKNESS + 15 : roomY + height - WALL_THICKNESS - 15,
         accent,
         agentBay: {
-          x: roomX + width - bayWidth - 18,
+          x: roomX + width - bayWidth - WALL_THICKNESS - 10,
           y: deskY - bayHeight / 2,
           width: bayWidth,
           height: bayHeight,

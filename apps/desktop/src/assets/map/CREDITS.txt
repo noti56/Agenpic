@@ -1,21 +1,30 @@
-	
+Agenpic presence-map art
+========================
 
-	Topdown (Shooter) Pack
+characters/hero-01..15.png
+agents/agent-01..09.png
 
-	by  Kenney Vleugels (Kenney.nl)
+	Cut from AI-generated sprite-sheet reference boards commissioned by the
+	project owner (ChatGPT image generation, Aug 2026). Extracted with a
+	background-matte + connected-component script: each sprite is the
+	tightest bounding box of one character, alpha-matted against the board's
+	panel colour and resampled to a uniform height (heroes 64px, agents
+	56px, 2px transparent padding).
 
-			------------------------------
+	The nine agent variants are the same robot in nine team colours. The
+	colour each one actually carries is recorded as `accent` in
+	src/components/sprites/heroDefs.ts — it is measured from the art, not
+	taken from the captions printed on the source board, which do not all
+	match the robot drawn beneath them.
 
-	License (Creative Commons Zero, CC0)
-	http://creativecommons.org/publicdomain/zero/1.0/
+	These are project-owned assets, not third-party CC0 art. Do not
+	redistribute them as a stock sprite pack.
 
-	You may use these assets in personal and commercial projects.
-	Credit (Kenney or www.kenney.nl) would be nice but is not mandatory.
+Previously
+----------
 
-			------------------------------
-
-	Donate:   http://support.kenney.nl
-	Request:  http://request.kenney.nl
-
-	Follow on Twitter for updates:
-	@KenneyWings
+	This directory held Kenney's "Topdown (Shooter)" pack (CC0,
+	https://kenney.nl). Those character and tile PNGs are no longer used —
+	the office props are drawn as primitives by OfficeScene, and the
+	characters are the sprites above. Recover them from git history if
+	needed.
