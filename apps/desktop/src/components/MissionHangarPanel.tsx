@@ -5,6 +5,7 @@ import {
   useAddTicketComment,
   useCreateTicket,
   useDeleteTicket,
+  useDeleteTicketComment,
   useMoveTicket,
   useTickets,
   useTicketComments,
@@ -46,6 +47,7 @@ export function MissionHangarPanel({ project, role }: MissionHangarPanelProps) {
 
   const { data: comments = [] } = useTicketComments(client, openTicketId ?? undefined);
   const addComment = useAddTicketComment(client, openTicketId ?? undefined);
+  const deleteComment = useDeleteTicketComment(client, openTicketId ?? undefined);
 
   const members: UserRecord[] = useMemo(() => {
     const list = memberRows.map((m) => m.expand?.user).filter((u): u is UserRecord => !!u);
@@ -108,6 +110,7 @@ export function MissionHangarPanel({ project, role }: MissionHangarPanelProps) {
           onUploadImage={(file) => updateTicketField({ "images+": file })}
           onRemoveImage={(filename) => updateTicketField({ "images-": filename })}
           onAddComment={(text) => addComment.mutate({ userId: user.id, text })}
+          onDeleteComment={(commentId) => deleteComment.mutate(commentId)}
           onDelete={() => {
             deleteTicket.mutate(openTicket.id);
             setOpenTicketId(null);

@@ -57,3 +57,11 @@ export function useAddTicketComment(client: AgenpicClient, ticketId: string | un
     onSuccess: () => qc.invalidateQueries({ queryKey: ticketCommentsQueryKey(ticketId) }),
   });
 }
+
+export function useDeleteTicketComment(client: AgenpicClient, ticketId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (commentId: string) => client.ticketComments.delete(commentId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ticketCommentsQueryKey(ticketId) }),
+  });
+}

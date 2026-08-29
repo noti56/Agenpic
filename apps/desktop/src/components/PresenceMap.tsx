@@ -1,5 +1,16 @@
 import Phaser from "phaser";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { Microphone } from "@phosphor-icons/react/Microphone";
+import { MicrophoneSlash } from "@phosphor-icons/react/MicrophoneSlash";
+import { VideoCamera } from "@phosphor-icons/react/VideoCamera";
+import { VideoCameraSlash } from "@phosphor-icons/react/VideoCameraSlash";
+import { SlidersHorizontal } from "@phosphor-icons/react/SlidersHorizontal";
+import { SpeakerHigh } from "@phosphor-icons/react/SpeakerHigh";
+import { Monitor } from "@phosphor-icons/react/Monitor";
+import { MonitorPlay } from "@phosphor-icons/react/MonitorPlay";
+import { ArrowsOut } from "@phosphor-icons/react/ArrowsOut";
+import { ArrowsIn } from "@phosphor-icons/react/ArrowsIn";
+import { Panel, Select } from "@agenpic/ui";
 import type { ProjectRecord } from "@agenpic/types";
 import { usePresence } from "../hooks/usePresence";
 import { useProximityVoice } from "../hooks/useProximityVoice";
@@ -36,6 +47,7 @@ export function PresenceMap({ project, active }: PresenceMapProps) {
   const layout = useMemo(() => computeOfficeLayout(roster), [roster]);
 
   const [selfPos, setSelfPos] = useState({ x: 200, y: 150 });
+  const [avSettingsOpen, setAvSettingsOpen] = useState(false);
   const [heroId, setHeroId] = useState<string | undefined>(() => (user ? loadStoredHero(user.id) : undefined));
   const selfHero = useMemo(() => resolveHero(heroId, user?.id ?? "self"), [heroId, user?.id]);
 
@@ -244,36 +256,222 @@ export function PresenceMap({ project, active }: PresenceMapProps) {
         <HeroPicker hero={selfHero} onSelect={handleHeroSelect} />
         <button
           type="button"
-          className={[styles.toolBtn, proximity.micOn ? styles.toolBtnActive : ""].join(" ")}
+          className={[styles.iconBtn, proximity.micOn ? styles.iconBtnActive : styles.iconBtnOff].join(" ")}
           onClick={proximity.toggleMic}
+          title={proximity.micOn ? "Mute microphone" : "Unmute microphone"}
+          aria-label={proximity.micOn ? "Mute microphone" : "Unmute microphone"}
+          aria-pressed={proximity.micOn}
         >
-          {proximity.micOn ? "Mic On" : "Mic Off"}
+          {proximity.micOn ? <Microphone size={16} weight="bold" /> : <MicrophoneSlash size={16} weight="bold" />}
         </button>
         <button
           type="button"
-          className={[styles.toolBtn, proximity.cameraOn ? styles.toolBtnActive : ""].join(" ")}
+          className={[styles.iconBtn, proximity.cameraOn ? styles.iconBtnActive : styles.iconBtnOff].join(" ")}
           onClick={proximity.toggleCamera}
+          title={proximity.cameraOn ? "Turn camera off" : "Turn camera on"}
+          aria-label={proximity.cameraOn ? "Turn camera off" : "Turn camera on"}
+          aria-pressed={proximity.cameraOn}
         >
-          {proximity.cameraOn ? "Camera On" : "Camera Off"}
+          {proximity.cameraOn ? <VideoCamera size={16} weight="bold" /> : <VideoCameraSlash size={16} weight="bold" />}
         </button>
+        <button
+          type="button"
+          className={[styles.iconBtn, proximity.screenShareOn ? styles.iconBtnActive : ""].join(" ")}
+          onClick={proximity.toggleScreenShare}
+          title={proximity.screenShareOn ? "Stop sharing screen" : "Share screen"}
+          aria-label={proximity.screenShareOn ? "Stop sharing screen" : "Share screen"}
+          aria-pressed={proximity.screenShareOn}
+        >
+          {proximity.screenShareOn ? <MonitorPlay size={16} weight="bold" /> : <Monitor size={16} weight="bold" />}
+        </button>
+        <div className={styles.avSettingsWrap}>
+          <button
+            type="button"
+            className={[styles.iconBtn, avSettingsOpen ? styles.iconBtnActive : ""].join(" ")}
+            onClick={() => setAvSettingsOpen((v) => !v)}
+            title="Audio & video settings"
+            aria-label="Audio & video settings"
+            aria-pressed={avSettingsOpen}
+          >
+            <SlidersHorizontal size={16} weight="bold" />
+          </button>
+          {avSettingsOpen && (
+            <Panel className={styles.avSettings}>
+              <Select
+                label="Microphone"
+                value={proximity.micDeviceId ?? ""}
+                onChange={(e) => proximity.setMicDevice(e.target.value)}
+                options={[
+                  { value: "", label: "System default" },
+                  ...proximity.micDevices.map((d, i) => ({
+                    value: d.deviceId,
+                    label: d.label || `Microphone ${i + 1}`,
+                  })),
+                ]}
+              />
+              <Select
+                label="Camera"
+                value={proximity.cameraDeviceId ?? ""}
+                onChange={(e) => proximity.setCameraDevice(e.target.value)}
+                options={[
+                  { value: "", label: "System default" },
+                  ...proximity.cameraDevices.map((d, i) => ({
+                    value: d.deviceId,
+                    label: d.label || `Camera ${i + 1}`,
+                  })),
+                ]}
+              />
+              <label className={styles.volumeField}>
+                <span className={styles.volumeLabel}>
+                  <SpeakerHigh size={14} weight="bold" />
+                  Volume — {proximity.volume}%
+                </span>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={proximity.volume}
+                  onChange={(e) => proximity.setVolume(Number(e.target.value))}
+                  className={styles.volumeSlider}
+                />
+              </label>
+            </Panel>
+          )}
+        </div>
       </div>
 
       <div className={styles.hint}>Click anywhere to move · get close to teammates to talk</div>
 
-      {[...proximity.remoteStreams.entries()].map(([socketId, stream]) => (
-        <RemoteAudio key={socketId} stream={stream} />
-      ))}
+      <div className={styles.callStrip}>
+        {proximity.cameraOn && <LocalPreview stream={proximity.localStream} />}
+        {proximity.screenShareOn && (
+          <ScreenShareTile stream={proximity.screenStream} label="Your screen" muted />
+        )}
+        {[...proximity.remoteStreams.entries()].map(([socketId, stream]) => (
+          <RemotePeerMedia key={socketId} stream={stream} volume={proximity.volume} />
+        ))}
+        {[...proximity.remoteScreenStreams.entries()].map(([socketId, stream]) => {
+          const peer = peers.find((p) => p.socketId === socketId);
+          return (
+            <ScreenShareTile
+              key={`screen-${socketId}`}
+              stream={stream}
+              label={peer ? `${peer.name}'s screen` : "Screen share"}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-function RemoteAudio({ stream }: { stream: MediaStream }) {
+/** Overlay button shown on hover, present on every video tile — expands the
+ * tile's own container into fullscreen so a shared screen or a teammate's
+ * camera can be viewed larger, independent of every other tile. */
+function FullscreenButton({ targetRef }: { targetRef: RefObject<HTMLElement | null> }) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(document.fullscreenElement === targetRef.current);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const toggle = () => {
+    if (document.fullscreenElement === targetRef.current) {
+      document.exitFullscreen().catch(() => {});
+    } else {
+      targetRef.current?.requestFullscreen?.().catch(() => {});
+    }
+  };
+
   return (
-    <audio
-      autoPlay
-      ref={(el) => {
-        if (el) el.srcObject = stream;
-      }}
-    />
+    <button
+      type="button"
+      className={styles.fullscreenBtn}
+      onClick={toggle}
+      title={isFullscreen ? "Exit full screen" : "Full screen"}
+      aria-label={isFullscreen ? "Exit full screen" : "Full screen"}
+    >
+      {isFullscreen ? <ArrowsIn size={13} weight="bold" /> : <ArrowsOut size={13} weight="bold" />}
+    </button>
+  );
+}
+
+function LocalPreview({ stream }: { stream: MediaStream | null }) {
+  const tileRef = useRef<HTMLDivElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (el && stream && el.srcObject !== stream) el.srcObject = stream;
+  }, [stream]);
+
+  return (
+    <div ref={tileRef} className={styles.videoTile}>
+      <video ref={videoRef} className={styles.videoEl} autoPlay muted playsInline />
+      <span className={styles.videoTileLabel}>You</span>
+      <FullscreenButton targetRef={tileRef} />
+    </div>
+  );
+}
+
+function RemotePeerMedia({ stream, volume }: { stream: MediaStream; volume: number }) {
+  const tileRef = useRef<HTMLDivElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const hasVideo = stream.getVideoTracks().length > 0;
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (el && el.srcObject !== stream) el.srcObject = stream;
+  }, [stream]);
+
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.volume = volume / 100;
+  }, [volume]);
+
+  return (
+    <div ref={tileRef} className={styles.videoTile}>
+      <video
+        ref={videoRef}
+        className={styles.videoEl}
+        autoPlay
+        playsInline
+        style={hasVideo ? undefined : { display: "none" }}
+      />
+      {!hasVideo && (
+        <div className={styles.audioOnlyTile}>
+          <Microphone size={18} weight="bold" />
+        </div>
+      )}
+      {hasVideo && <FullscreenButton targetRef={tileRef} />}
+    </div>
+  );
+}
+
+function ScreenShareTile({
+  stream,
+  label,
+  muted,
+}: {
+  stream: MediaStream | null;
+  label: string;
+  muted?: boolean;
+}) {
+  const tileRef = useRef<HTMLDivElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (el && stream && el.srcObject !== stream) el.srcObject = stream;
+  }, [stream]);
+
+  return (
+    <div ref={tileRef} className={[styles.videoTile, styles.screenTile].join(" ")}>
+      <video ref={videoRef} className={styles.videoEl} autoPlay muted={muted} playsInline />
+      <span className={styles.videoTileLabel}>{label}</span>
+      <FullscreenButton targetRef={tileRef} />
+    </div>
   );
 }

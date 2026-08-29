@@ -25,6 +25,7 @@ export interface TicketModalProps {
   onUploadImage: (file: File) => void;
   onRemoveImage: (filename: string) => void;
   onAddComment: (text: string) => void;
+  onDeleteComment: (commentId: string) => void;
   onDelete?: () => void;
   /** Resolves a stored PocketBase filename to a viewable URL. */
   imageUrl: (filename: string) => string;
@@ -44,6 +45,7 @@ export function TicketModal({
   onUploadImage,
   onRemoveImage,
   onAddComment,
+  onDeleteComment,
   onDelete,
   imageUrl,
 }: TicketModalProps) {
@@ -171,7 +173,19 @@ export function TicketModal({
                         <span className={styles.commentAuthor}>
                           {author?.name || author?.email || "Unknown"}
                         </span>
-                        <span>{new Date(c.created).toLocaleString()}</span>
+                        <span className={styles.commentMetaRight}>
+                          <span>{new Date(c.created).toLocaleString()}</span>
+                          {c.user === currentUserId && (
+                            <button
+                              type="button"
+                              className={styles.commentDeleteBtn}
+                              onClick={() => onDeleteComment(c.id)}
+                              aria-label="Delete comment"
+                            >
+                              <X size={12} weight="bold" />
+                            </button>
+                          )}
+                        </span>
                       </div>
                       <div className={styles.commentText}>{c.text}</div>
                     </div>
