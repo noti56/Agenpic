@@ -29,3 +29,6 @@ tauri-plugin-dialog = "2.7.2"
 tauri-plugin-store = "2.4.4"
 sysinfo = "0.39.6"
 
+[target.'cfg(windows)'.dependencies]
+webview2-com = "0.38.2"
+
