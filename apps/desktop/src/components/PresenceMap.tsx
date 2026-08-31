@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { Microphone } from "@phosphor-icons/react/Microphone";
 import { MicrophoneSlash } from "@phosphor-icons/react/MicrophoneSlash";
 import { VideoCamera } from "@phosphor-icons/react/VideoCamera";
@@ -65,8 +66,8 @@ export function PresenceMap({ project, active }: PresenceMapProps) {
     [user, selfHero.id],
   );
 
-  const { socket, peers, move } = usePresence(project.id, self);
-  const proximity = useProximityVoice(socket, socket?.id, peers, selfPos);
+  const { socket, socketId, peers, move } = usePresence(project.id, self);
+  const proximity = useProximityVoice(socket, socketId, peers, selfPos);
 
   // Mount the Phaser game once. All further state is pushed into the scene
   // imperatively (below) rather than through React reconciliation — Phaser
@@ -162,6 +163,20 @@ export function PresenceMap({ project, active }: PresenceMapProps) {
     setSelfPos({ x: ownRoom.deskX, y: ownRoom.deskY });
     move(ownRoom.deskX, ownRoom.deskY);
   }, [layout, user, move]);
+
+  // ...but that spawn broadcast happens exactly once, and `move()` silently
+  // does nothing while the socket is still connecting (or has dropped and
+  // come back). When it is lost, every other client keeps us at the random
+  // point the server assigned on connect — and since proximity voice/video
+  // is triggered purely from those broadcast positions, two people standing
+  // on the same tile would never connect. Re-announce on every (re)connect,
+  // which is idempotent and costs one message.
+  const selfPosRef = useRef(selfPos);
+  selfPosRef.current = selfPos;
+  useEffect(() => {
+    if (!socketId) return;
+    move(selfPosRef.current.x, selfPosRef.current.y);
+  }, [socketId, move]);
 
   // Agent nodes stand on their owner's dock rather than wherever they were
   // spawned. Derived here, on the map, instead of being broadcast by each
@@ -348,7 +363,12 @@ export function PresenceMap({ project, active }: PresenceMapProps) {
           <ScreenShareTile stream={proximity.screenStream} label="Your screen" muted />
         )}
         {[...proximity.remoteStreams.entries()].map(([socketId, stream]) => (
-          <RemotePeerMedia key={socketId} stream={stream} volume={proximity.volume} />
+          <RemotePeerMedia
+            key={socketId}
+            stream={stream}
+            volume={proximity.volume}
+            hasVideo={proximity.remoteCameraOn.has(socketId)}
+          />
         ))}
         {[...proximity.remoteScreenStreams.entries()].map(([socketId, stream]) => {
           const peer = peers.find((p) => p.socketId === socketId);
@@ -417,27 +437,84 @@ function LocalPreview({ stream }: { stream: MediaStream | null }) {
   );
 }
 
-function RemotePeerMedia({ stream, volume }: { stream: MediaStream; volume: number }) {
-  const tileRef = useRef<HTMLDivElement | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const hasVideo = stream.getVideoTracks().length > 0;
+/**
+ * The peer's sound, and nothing else.
+ *
+ * Deliberately its own element, portalled to <body> and never hidden. Remote
+ * audio used to ride along on the video tile, which is `display:none`
+ * whenever that peer's camera is off — and the whole map panel is
+ * additionally `display:none` whenever another tab is active. A hidden media
+ * element is not a dependable audio sink (WebView2 in particular stops
+ * driving it), which is why voice appeared to work only while somebody's
+ * camera happened to be on. Keeping the sink permanently mounted and visible
+ * to the layout decouples "can I hear them" from "is a tile on screen".
+ */
+function RemoteAudio({ stream, volume }: { stream: MediaStream; volume: number }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    const el = videoRef.current;
-    if (el && el.srcObject !== stream) el.srcObject = stream;
+    const el = audioRef.current;
+    if (!el || el.srcObject === stream) return;
+    el.srcObject = stream;
+    const tryPlay = () => {
+      el.play().catch(() => {
+        /* autoplay refused — retried on the next gesture below */
+      });
+    };
+    tryPlay();
+    // If the autoplay policy refused us, the user's next interaction is the
+    // first moment playback is allowed to start.
+    document.addEventListener("pointerdown", tryPlay);
+    document.addEventListener("keydown", tryPlay);
+    return () => {
+      document.removeEventListener("pointerdown", tryPlay);
+      document.removeEventListener("keydown", tryPlay);
+    };
   }, [stream]);
 
   useEffect(() => {
-    if (videoRef.current) videoRef.current.volume = volume / 100;
+    if (audioRef.current) audioRef.current.volume = volume / 100;
   }, [volume]);
 
+  return createPortal(<audio ref={audioRef} autoPlay />, document.body);
+}
+
+function RemotePeerMedia({
+  stream,
+  volume,
+  hasVideo,
+}: {
+  stream: MediaStream;
+  volume: number;
+  /** Driven by the peer's broadcast media-state, not by track presence: under the
+   *  fixed-transceiver-slot design the video track always exists, it is just muted
+   *  when their camera is off. */
+  hasVideo: boolean;
+}) {
+  const tileRef = useRef<HTMLDivElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || el.srcObject === stream) return;
+    el.srcObject = stream;
+    el.play().catch(() => {
+      /* muted video: the policy allows this, and RemoteAudio owns the sound */
+    });
+  }, [stream]);
+
   return (
-    <div ref={tileRef} className={styles.videoTile}>
+    <>
+      <RemoteAudio stream={stream} volume={volume} />
+      <div ref={tileRef} className={styles.videoTile}>
+      {/* Muted on purpose — RemoteAudio is the single audio sink, so this
+          element carrying the same stream must not double up the sound. */}
       <video
         ref={videoRef}
         className={styles.videoEl}
         autoPlay
         playsInline
+        muted
         style={hasVideo ? undefined : { display: "none" }}
       />
       {!hasVideo && (
@@ -446,7 +523,8 @@ function RemotePeerMedia({ stream, volume }: { stream: MediaStream; volume: numb
         </div>
       )}
       {hasVideo && <FullscreenButton targetRef={tileRef} />}
-    </div>
+      </div>
+    </>
   );
 }
 

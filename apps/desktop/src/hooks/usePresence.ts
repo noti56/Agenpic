@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
 import { connectPresence } from "../lib/socket";
 import type { HandshakeAuth, PeerState } from "../lib/presenceTypes";
@@ -9,6 +9,11 @@ const log = getLogger("presence");
 
 export interface UsePresenceResult {
   socket: Socket | null;
+  /** Our own socket id, or undefined until the handshake completes. Held as
+   *  state (not read off `socket.id`) so that consumers actually re-render
+   *  when it lands — WebRTC role assignment depends on comparing it against
+   *  peer ids, and silently reading a stale `undefined` breaks that. */
+  socketId: string | undefined;
   peers: PeerState[];
   move: (x: number, y: number) => void;
 }
@@ -24,6 +29,7 @@ export function usePresence(
   self: Omit<HandshakeAuth, "projectId"> | undefined,
 ): UsePresenceResult {
   const [peers, setPeers] = useState<Map<string, PeerState>>(new Map());
+  const [socketId, setSocketId] = useState<string | undefined>(undefined);
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -33,8 +39,16 @@ export function usePresence(
     socketRef.current = socket;
     setPeers(new Map());
 
-    socket.on("connect", () => log.info(`connected as ${self.kind}`, { projectId, socketId: socket.id }));
-    socket.on("disconnect", (reason) => log.info("disconnected", { reason }));
+    setSocketId(undefined);
+
+    socket.on("connect", () => {
+      setSocketId(socket.id);
+      log.info(`connected as ${self.kind}`, { projectId, socketId: socket.id });
+    });
+    socket.on("disconnect", (reason) => {
+      setSocketId(undefined);
+      log.info("disconnected", { reason });
+    });
     socket.on("connect_error", (err) => log.error("connection error", err.message));
 
     socket.on("presence:roster", (roster: PeerState[]) => {
@@ -74,13 +88,17 @@ export function usePresence(
     return () => {
       socket.disconnect();
       socketRef.current = null;
+      setSocketId(undefined);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, self?.userId, self?.kind, self?.meta?.hero]);
 
-  const move = (x: number, y: number) => {
+  // Stable identity: consumers key effects off `move` (the map re-registers
+  // its click handler, and re-announces position on reconnect), and a fresh
+  // closure each render would make those effects re-run every render.
+  const move = useCallback((x: number, y: number) => {
     socketRef.current?.emit("presence:move", { x, y });
-  };
+  }, []);
 
-  return { socket: socketRef.current, peers: [...peers.values()], move };
+  return { socket: socketRef.current, socketId, peers: [...peers.values()], move };
 }
