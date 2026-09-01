@@ -22,6 +22,13 @@ services:
       - "4001:4001"
     environment:
       - PORT=4001
+      # Cloudflare Realtime TURN. Long-term secrets: they stay in this
+      # process and are only ever used to mint short-lived per-client
+      # credentials served from GET /ice. Leave unset for local dev — the
+      # server then serves a STUN-only config, which is enough for peers on
+      # one machine or one LAN and not for anything beyond that.
+      - TURN_KEY_ID=${TURN_KEY_ID:-}
+      - TURN_KEY_API_TOKEN=${TURN_KEY_API_TOKEN:-}
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4001/health"]
       interval: 5s

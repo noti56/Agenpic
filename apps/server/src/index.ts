@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { Server } from "socket.io";
 import { createLogger } from "@agenpic/logger";
+import { getIceServers, turnConfigured } from "./ice.js";
 import type {
   ClientToServerEvents,
   HandshakeAuth,
@@ -11,13 +12,53 @@ import type {
 const PORT = Number(process.env.PORT ?? 4001);
 const log = createLogger("server");
 
+// The desktop app fetches these over plain HTTP from a webview whose origin
+// is `tauri://localhost` (or `http://tauri.localhost` on Windows), so every
+// response here is cross-origin and needs CORS headers — unlike the Socket.io
+// endpoint below, which sets its own.
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
 const httpServer = createServer((req, res) => {
-  if (req.url === "/health") {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ ok: true }));
+  if (req.method === "OPTIONS") {
+    res.writeHead(204, CORS_HEADERS);
+    res.end();
     return;
   }
-  res.writeHead(404);
+
+  if (req.url === "/health") {
+    res.writeHead(200, { "Content-Type": "application/json", ...CORS_HEADERS });
+    res.end(JSON.stringify({ ok: true, turn: turnConfigured }));
+    return;
+  }
+
+  // WebRTC media is peer-to-peer UDP and never touches this server (nor the
+  // Cloudflare Tunnel in front of it) — only signaling does. Without a TURN
+  // relay in this list, any two peers whose NATs can't be hole-punched
+  // through simply never exchange media, which looks exactly like "audio and
+  // video silently don't work" on the client.
+  if (req.url === "/ice") {
+    getIceServers()
+      .then((iceServers) => {
+        res.writeHead(200, {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+          ...CORS_HEADERS,
+        });
+        res.end(JSON.stringify({ iceServers }));
+      })
+      .catch((err) => {
+        log.error("/ice failed", err instanceof Error ? err.message : err);
+        res.writeHead(500, { "Content-Type": "application/json", ...CORS_HEADERS });
+        res.end(JSON.stringify({ error: "failed to resolve ICE servers" }));
+      });
+    return;
+  }
+
+  res.writeHead(404, CORS_HEADERS);
   res.end();
 });
 
@@ -87,4 +128,11 @@ io.on("connection", (socket) => {
 
 httpServer.listen(PORT, () => {
   log.info(`listening on :${PORT}`);
+  if (!turnConfigured) {
+    log.warn(
+      "TURN_KEY_ID/TURN_KEY_API_TOKEN not set — serving STUN-only ICE config. " +
+        "Voice/video will work between peers on the same machine or LAN, and fail " +
+        "between peers behind separate NATs.",
+    );
+  }
 });

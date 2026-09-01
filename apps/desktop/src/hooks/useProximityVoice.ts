@@ -1,9 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
 import type { PeerState } from "../lib/presenceTypes";
+import { currentIceServers, primeIceServers } from "../lib/iceServers";
+import { emitToast } from "../lib/toastBus";
 
 const PROXIMITY_RADIUS = 160;
 const MAX_MESH_PEERS = 6;
+/**
+ * How long a connection may sit in "disconnected" before we give up on it.
+ * That state is usually a transient blip (a few lost packets, a wifi hiccup)
+ * that ICE recovers from on its own; tearing down the moment it appears
+ * meant one hiccup permanently killed a call until both people walked out of
+ * range and back in. On loopback it never fired at all, which is why this
+ * only ever hurt real cross-network calls.
+ */
+const DISCONNECT_GRACE_MS = 8000;
 const MIC_DEVICE_KEY = "agenpic:av-mic-device";
 const CAMERA_DEVICE_KEY = "agenpic:av-camera-device";
 const VOLUME_KEY = "agenpic:av-volume";
@@ -47,6 +58,11 @@ interface PeerConn {
   pendingCandidates: RTCIceCandidateInit[];
   /** Set once setRemoteDescription has succeeded, so candidates can be flushed. */
   remoteDescriptionSet: boolean;
+  /** Candidate types we gathered locally ("host" / "srflx" / "relay"), purely
+   *  for diagnostics: no "relay" here means TURN is not actually reachable. */
+  gatheredTypes: Set<string>;
+  /** Pending give-up timer while the connection sits in "disconnected". */
+  dropTimer: ReturnType<typeof setTimeout> | null;
 }
 
 export interface UseProximityVoiceResult {
@@ -241,6 +257,8 @@ export function useProximityVoice(
   function teardownPeer(socketId: string) {
     const conn = connsRef.current.get(socketId);
     if (!conn) return;
+    if (conn.dropTimer) clearTimeout(conn.dropTimer);
+    conn.dropTimer = null;
     conn.pc.onicecandidate = null;
     conn.pc.ontrack = null;
     conn.pc.onconnectionstatechange = null;
@@ -274,9 +292,11 @@ export function useProximityVoice(
   }
 
   function createPeerConnection(remoteId: string, initiator: boolean): PeerConn {
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    });
+    // Served by the signaling server rather than hardcoded, so the TURN relay
+    // (and its short-lived credentials) can change without rebuilding and
+    // redistributing the desktop app. Falls back to STUN-only if the server
+    // has not answered yet — see lib/iceServers.
+    const pc = new RTCPeerConnection({ iceServers: currentIceServers() });
     const conn: PeerConn = {
       pc,
       initiator,
@@ -284,6 +304,8 @@ export function useProximityVoice(
       screen: new MediaStream(),
       pendingCandidates: [],
       remoteDescriptionSet: false,
+      gatheredTypes: new Set(),
+      dropTimer: null,
     };
     // Registered synchronously so a concurrent effect re-run (any peer
     // moving re-runs the proximity effect) sees this connection as already
@@ -310,20 +332,69 @@ export function useProximityVoice(
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
+        if (event.candidate.type) conn.gatheredTypes.add(event.candidate.type);
         signal(remoteId, { type: "ice-candidate", candidate: event.candidate.toJSON() });
+        return;
+      }
+      // A null candidate means gathering is done. What we did (or did not)
+      // gather is the single most useful diagnostic when media never flows:
+      // "host" only means we never reached STUN/TURN at all, and no "relay"
+      // means there is no fallback if hole-punching fails.
+      const types = [...conn.gatheredTypes];
+      console.log(`[proximity-voice] ${remoteId} gathered candidates: ${types.join(", ") || "none"}`);
+      if (!conn.gatheredTypes.has("relay")) {
+        console.warn(
+          `[proximity-voice] ${remoteId}: no relay candidate — if this peer is not on ` +
+            "your machine or LAN, media will likely fail. Check the server's /ice endpoint.",
+        );
       }
     };
 
     pc.onconnectionstatechange = () => {
       console.log(`[proximity-voice] ${remoteId} connectionState -> ${pc.connectionState}`);
       if (pc.connectionState === "connected") {
+        if (conn.dropTimer) clearTimeout(conn.dropTimer);
+        conn.dropTimer = null;
         setConnectedPeerIds((prev) => new Set(prev).add(remoteId));
         // A peer that has just finished connecting has no idea whether our
         // camera/screen were already live before it arrived.
         broadcastMediaState();
-      } else if (["disconnected", "failed", "closed"].includes(pc.connectionState)) {
-        teardownPeer(remoteId);
+        return;
       }
+
+      if (pc.connectionState === "disconnected") {
+        // Give ICE a chance to recover before dropping — see DISCONNECT_GRACE_MS.
+        if (conn.dropTimer) return;
+        conn.dropTimer = setTimeout(() => {
+          conn.dropTimer = null;
+          if (pc.connectionState === "disconnected") {
+            console.warn(`[proximity-voice] ${remoteId} stayed disconnected — dropping`);
+            teardownPeer(remoteId);
+          }
+        }, DISCONNECT_GRACE_MS);
+        return;
+      }
+
+      if (pc.connectionState === "failed") {
+        // Previously this tore down in silence, so an unroutable peer just
+        // looked like "audio and video don't work" with nothing anywhere to
+        // say why. Say it — on screen and in the log.
+        const types = [...conn.gatheredTypes].join(", ") || "none";
+        console.error(
+          `[proximity-voice] ${remoteId} ICE failed (local candidate types: ${types}) — ` +
+            "no working network path to this peer",
+        );
+        emitToast({
+          kind: "warning",
+          message: conn.gatheredTypes.has("relay")
+            ? "Couldn't reach a nearby teammate for voice/video."
+            : "Voice/video unavailable: no TURN relay, so peers on other networks can't connect.",
+        });
+        teardownPeer(remoteId);
+        return;
+      }
+
+      if (pc.connectionState === "closed") teardownPeer(remoteId);
     };
     pc.oniceconnectionstatechange = () => {
       console.log(`[proximity-voice] ${remoteId} iceConnectionState -> ${pc.iceConnectionState}`);
@@ -541,6 +612,18 @@ export function useProximityVoice(
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, selfSocketId, peers, selfPos.x, selfPos.y]);
+
+  // Load the ICE server list (including TURN credentials) up front, well
+  // before anyone walks into proximity, and refresh it periodically so the
+  // short-lived TURN credentials never go stale in a long-running session.
+  // Connections read whatever is current at construction time and never
+  // block on this — a peer that connects before it lands just gets the
+  // STUN-only fallback, exactly as before.
+  useEffect(() => {
+    primeIceServers();
+    const id = setInterval(() => primeIceServers(true), 60 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
 
   // Enumerate audio/video input devices for the picker, refreshing when the
   // OS device list changes (e.g. a USB webcam gets plugged in). Labels are
