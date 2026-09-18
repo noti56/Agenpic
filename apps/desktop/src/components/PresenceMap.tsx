@@ -16,6 +16,7 @@ import type { ProjectRecord } from "@agenpic/types";
 import { usePresence } from "../hooks/usePresence";
 import { useProximityVoice } from "../hooks/useProximityVoice";
 import { useProjectRoster } from "../hooks/useProjectRoster";
+import { useProjectStatuses } from "../hooks/useProjectStatuses";
 import { useAuth } from "../state/AuthContext";
 import { HeroPicker } from "./HeroPicker";
 import { agentTextureForAccent, loadStoredHero, resolveHero, storeHero } from "./sprites/heroDefs";
@@ -51,6 +52,7 @@ export function PresenceMap({ project, active }: PresenceMapProps) {
   const [avSettingsOpen, setAvSettingsOpen] = useState(false);
   const [heroId, setHeroId] = useState<string | undefined>(() => (user ? loadStoredHero(user.id) : undefined));
   const selfHero = useMemo(() => resolveHero(heroId, user?.id ?? "self"), [heroId, user?.id]);
+  const statuses = useProjectStatuses(project.id);
 
   const self = useMemo(
     () =>
@@ -66,7 +68,7 @@ export function PresenceMap({ project, active }: PresenceMapProps) {
     [user, selfHero.id],
   );
 
-  const { socket, socketId, peers, move } = usePresence(project.id, self);
+  const { socket, socketId, peers, move, poke } = usePresence(project.id, self);
   const proximity = useProximityVoice(socket, socketId, peers, selfPos);
 
   // Mount the Phaser game once. All further state is pushed into the scene
@@ -126,6 +128,10 @@ export function PresenceMap({ project, active }: PresenceMapProps) {
       move(x, y);
     });
   }, [move]);
+
+  useEffect(() => {
+    sceneRef.current?.setPokeHandler((toUserId) => poke(toUserId));
+  }, [poke]);
 
   useEffect(() => {
     sceneRef.current?.setLayout(layout);
@@ -223,6 +229,7 @@ export function PresenceMap({ project, active }: PresenceMapProps) {
         y: selfPos.y,
         textureKey: selfHero.textureKey,
         name: `${user.name || user.email} (you)`,
+        statusLabel: statuses.get(`${user.id}:user`),
         connected: true,
         isSelf: true,
         accent: accentByUser.get(user.id),
@@ -248,13 +255,16 @@ export function PresenceMap({ project, active }: PresenceMapProps) {
           ownerLabel: isAgent && !docked ? peer.meta?.owner : undefined,
           pathLabel:
             isAgent && !docked ? peer.meta?.path?.split(/[\\/]/).filter(Boolean).pop() : undefined,
+          statusLabel: statuses.get(`${isAgent ? ownerId : peer.userId}:${isAgent ? "agent" : "user"}`),
+          pokeable: !isAgent,
+          peerUserId: isAgent ? undefined : peer.userId,
           connected: proximity.connectedPeerIds.has(peer.socketId),
           isSelf: false,
         };
       }),
     ];
     sceneRef.current?.syncAvatars(avatars);
-  }, [user, selfPos, selfHero.textureKey, peers, proximity.connectedPeerIds, agentPlacements, accentByUser]);
+  }, [user, selfPos, selfHero.textureKey, statuses, peers, proximity.connectedPeerIds, agentPlacements, accentByUser]);
 
   const handleHeroSelect = (id: string) => {
     setHeroId(id);

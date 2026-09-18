@@ -30,3 +30,15 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--agp-cyan-dim);
 }
+
+.routesWrap {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.shellStack {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}

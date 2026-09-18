@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { client, POCKETBASE_URL } from "../lib/pocketbase";
+import { SERVER_URL } from "../lib/socket";
 import { getLogger } from "../lib/logger";
 
 const log = getLogger("agenpic-cli-config");
@@ -20,6 +21,7 @@ export function useAgenpicCliConfig(projectId: string | undefined, projectPath: 
     const writeConfig = async () => {
       const configJson = JSON.stringify({
         pocketbaseUrl: POCKETBASE_URL,
+        serverUrl: SERVER_URL,
         projectId,
         token: client.pb.authStore.token,
         // ticket_comments.user is a required relation, so the CLI needs to

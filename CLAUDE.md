@@ -30,6 +30,16 @@ docker compose up          # PocketBase on :8090 (pb_migrations/ auto-applied), 
 
 PocketBase must be running before the desktop app can auth or load projects — the client hardcodes `http://127.0.0.1:8090` (`apps/desktop/src/lib/pocketbase.ts`). The Socket.io server (`:4001`) is only needed for presence/chat-relay/WebRTC signaling features, not for auth/kanban/terminal.
 
+**`apps/server`'s Docker image is a build stage, not a live source mount.** `apps/server/Dockerfile` does `COPY . .` then `pnpm --filter @agenpic/server build` (`tsc` → `dist/index.js`) at image-build time — `docker compose up` alone reuses whatever image was last built and will silently keep serving stale server code after you edit `apps/server/src/*`. After any change there, rebuild before testing:
+
+```bash
+pnpm docker:server:rebuild   # docker compose up -d --build server
+```
+
+A stale container still answers `/health` fine but 404s on routes it doesn't have yet, and since neither PocketBase's client (`apps/desktop/src-tauri/templates/agenpic-cli.mjs`'s `serverRequest`) nor most callers check `res.ok` before `res.json()`, a 404's empty body surfaces as a confusing `Unexpected end of JSON input` rather than a clear error — that symptom means "rebuild the server image," not a code bug.
+
+**The bundled `agenpic-cli.mjs` is baked into the Rust binary at compile time, then written to disk per-project on open — two staleness layers, not one.** `apps/desktop/src-tauri/src/scaffold.rs` embeds `templates/agenpic-cli.mjs` via `include_str!`, so editing that template only takes effect once (1) the Rust crate recompiles — `tauri dev` normally does this automatically when a watched file changes, but can lag — and (2) `scaffold_project` re-runs, which only happens when a project is *opened* (not on every render of an already-open tab). After editing the CLI template, close and reopen the project tab (or restart `pnpm dev` entirely) before testing new CLI commands; a project's `.agenpic/bin/agenpic-cli.mjs` and `.agenpic/agenpic.config.json` on disk are otherwise silently stale. `agenpic.config.json` also requires an actively signed-in, running desktop session to have a non-empty `token`/`userId` — a project opened while unauthenticated (or with `pnpm dev` not running at all) leaves those fields empty/`null`, and CLI commands that need them fail with "this project's config predates X support" even though the real cause is just "no live session wrote a fresh config."
+
 Per-package, useful when iterating on one piece:
 
 ```bash

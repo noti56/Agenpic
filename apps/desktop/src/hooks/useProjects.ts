@@ -11,6 +11,23 @@ export function useProjects() {
   });
 }
 
+export function useUpdateProjectImages() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      image,
+      orgImage,
+    }: {
+      projectId: string;
+      /** Omit a field to leave it unchanged; pass "" to clear it. */
+      image?: string;
+      orgImage?: string;
+    }) => client.projects.update(projectId, { image, orgImage }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["projects"] }),
+  });
+}
+
 export function useCreateProject() {
   const qc = useQueryClient();
   const { user } = useAuth();

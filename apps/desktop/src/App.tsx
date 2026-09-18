@@ -7,6 +7,8 @@ import { ProjectPicker } from "./screens/ProjectPicker";
 import { Shell } from "./screens/Shell";
 import { ToastBridge } from "./components/ToastBridge";
 import { LogViewer } from "./components/LogViewer";
+import { ProjectTabBar } from "./components/ProjectTabBar";
+import { PokeBridge } from "./components/PokeBridge";
 import { authReady } from "./lib/pocketbase";
 import "@agenpic/ui/src/tokens.css";
 import "./App.css";
@@ -22,11 +24,20 @@ const queryClient = new QueryClient({
 
 function Routes() {
   const { user } = useAuth();
-  const { activeProject } = useProjectContext();
+  const { openProjects, activeProject } = useProjectContext();
 
   if (!user) return <AuthScreen />;
-  if (!activeProject) return <ProjectPicker />;
-  return <Shell />;
+  if (openProjects.length === 0) return <ProjectPicker />;
+  return (
+    <div className="routesWrap">
+      <ProjectTabBar />
+      <div className="shellStack">
+        {openProjects.map((project) => (
+          <Shell key={project.id} project={project} active={project.id === activeProject?.id} />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function App() {
@@ -46,6 +57,7 @@ function App() {
         <ProjectProvider>
           <Routes />
           <ToastBridge />
+          <PokeBridge />
           <LogViewer />
         </ProjectProvider>
       </AuthProvider>

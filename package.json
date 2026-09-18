@@ -16,7 +16,8 @@
     "clean": "turbo run clean",
     "build:tauri": "turbo run build --filter=@agenpic/logger && pnpm --filter @agenpic/desktop tauri build",
     "docker:prod": "docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build",
-    "docker:prod:down": "docker compose -f docker-compose.yml -f docker-compose.prod.yml down"
+    "docker:prod:down": "docker compose -f docker-compose.yml -f docker-compose.prod.yml down",
+    "docker:server:rebuild": "docker compose up -d --build server"
   },
   "devDependencies": {
     "turbo": "^2.5.0",

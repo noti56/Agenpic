@@ -1,6 +1,8 @@
 .wrap {
-  height: 100vh;
-  width: 100vw;
+  /* Rendered nested under the project tab bar (see Shell.tsx), not as a
+     page root — 100vh/100vw here would overflow below/past the window. */
+  height: 100%;
+  width: 100%;
   background: var(--agp-bg-void);
   display: flex;
   align-items: center;

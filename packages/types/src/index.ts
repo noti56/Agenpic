@@ -16,6 +16,10 @@ export interface ProjectRecord {
   name: string;
   path: string;
   owner: string;
+  /** Base64 data URI (client-resized), not a PocketBase file field — see apps/desktop/src/lib/imageToDataUrl.ts. */
+  image?: string;
+  /** Same storage shape as `image`. No organization entity exists yet — this is a placeholder ref on the project for when one does. */
+  orgImage?: string;
   created: string;
   updated: string;
 }
@@ -67,6 +71,30 @@ export interface CommentRecord {
   expand?: {
     user?: UserRecord;
   };
+}
+
+export type PresenceStatusKind = "user" | "agent";
+
+/** Cap for PresenceStatusRecord.status — mirrored in the CLI template (apps/desktop/src-tauri/templates/agenpic-cli.mjs), which can't import this constant. */
+export const MAX_STATUS_LEN = 80;
+
+/**
+ * A free-text, Slack-style status shown on the presence map — persisted in
+ * PocketBase (not ephemeral socket state) so it survives reconnects and
+ * propagates via PocketBase's realtime subscriptions, same as tickets/chat.
+ * One row per (project, user, kind): `kind: "user"` is the human's own
+ * status; `kind: "agent"` is set by that human's Claude Code session(s) via
+ * the CLI's `status` command. Multiple simultaneous terminal tabs for the
+ * same human share the one `agent` row — the CLI has no way to address a
+ * specific tab.
+ */
+export interface PresenceStatusRecord {
+  id: string;
+  project: string;
+  user: string;
+  kind: PresenceStatusKind;
+  status: string;
+  updated: string;
 }
 
 export interface MessageRecord {

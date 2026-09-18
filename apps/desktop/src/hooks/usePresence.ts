@@ -3,6 +3,7 @@ import type { Socket } from "socket.io-client";
 import { connectPresence } from "../lib/socket";
 import type { HandshakeAuth, PeerState } from "../lib/presenceTypes";
 import { emitToast } from "../lib/toastBus";
+import { emitPoke } from "../lib/pokeBus";
 import { getLogger } from "../lib/logger";
 
 const log = getLogger("presence");
@@ -16,6 +17,8 @@ export interface UsePresenceResult {
   socketId: string | undefined;
   peers: PeerState[];
   move: (x: number, y: number) => void;
+  /** Human-to-human poke, targeted by userId (clicking a peer's avatar). */
+  poke: (toUserId: string) => void;
 }
 
 /**
@@ -85,6 +88,14 @@ export function usePresence(
       });
     });
 
+    // Only the human-facing connection cares about being poked — an
+    // agent's own connection never receives one (the server only emits
+    // "poke" to kind:"user" sockets), but guard anyway for clarity.
+    socket.on("poke", (payload) => {
+      if (self.kind !== "user") return;
+      emitPoke(payload);
+    });
+
     return () => {
       socket.disconnect();
       socketRef.current = null;
@@ -100,5 +111,9 @@ export function usePresence(
     socketRef.current?.emit("presence:move", { x, y });
   }, []);
 
-  return { socket: socketRef.current, socketId, peers: [...peers.values()], move };
+  const poke = useCallback((toUserId: string) => {
+    socketRef.current?.emit("presence:poke", { toUserId });
+  }, []);
+
+  return { socket: socketRef.current, socketId, peers: [...peers.values()], move, poke };
 }

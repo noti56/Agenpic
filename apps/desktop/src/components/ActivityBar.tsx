@@ -12,12 +12,14 @@ interface ActivityBarProps {
   items: ActivityBarItem[];
   activePanel: PanelId | null;
   onSelect: (id: PanelId) => void;
+  /** Rendered pinned to the bottom of the rail — the project/org avatar button. */
+  footer?: ReactNode;
 }
 
 /** VS Code-style icon rail: one button per dockable workspace panel (see
  * useWorkspaceLayout). Clicking replaces the current view with this panel;
  * clicking the already-active one closes it. No drag-and-drop. */
-export function ActivityBar({ items, activePanel, onSelect }: ActivityBarProps) {
+export function ActivityBar({ items, activePanel, onSelect, footer }: ActivityBarProps) {
   return (
     <nav className={styles.bar} aria-label="Workspace panels">
       <div className={styles.top}>
@@ -38,6 +40,7 @@ export function ActivityBar({ items, activePanel, onSelect }: ActivityBarProps) 
           );
         })}
       </div>
+      {footer && <div className={styles.bottom}>{footer}</div>}
     </nav>
   );
 }

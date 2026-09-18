@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
+import type { ProjectRecord } from "@agenpic/types";
 // Deep-imported per icon (rather than the `@phosphor-icons/react` barrel)
 // so the bundle only includes the handful of icons actually used here — the
 // barrel re-exports the entire ~2000-icon set in a way Rollup couldn't
@@ -23,6 +24,8 @@ import { WorkspacePane } from "../components/WorkspacePane";
 import { TerminalPanel } from "../components/TerminalPanel";
 import { MissionHangarPanel } from "../components/MissionHangarPanel";
 import { ChatPanel } from "../components/ChatPanel";
+import { StatusButton } from "../components/StatusButton";
+import { ProjectAvatarButton } from "../components/ProjectAvatarButton";
 
 // Phaser (~1MB) / the markdown editor are only needed once their panels are
 // actually opened — code-split them out of the main bundle instead of
@@ -50,8 +53,14 @@ const PANEL_TITLES: Record<PanelId, string> = {
   docs: "Docs",
 };
 
-export function Shell() {
-  const { activeProject, selectProject } = useProjectContext();
+interface ShellProps {
+  project: ProjectRecord;
+  /** Whether this project's tab is the one currently focused (vs. mounted-but-hidden). */
+  active: boolean;
+}
+
+export function Shell({ project: activeProject, active }: ShellProps) {
+  const { closeProject, clearProjectUnread } = useProjectContext();
   const [showMembers, setShowMembers] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPathSetup, setShowPathSetup] = useState(false);
@@ -72,6 +81,10 @@ export function Shell() {
 
   const { activePanel, select, close } = useWorkspaceLayout(activeProject?.id ?? "");
 
+  useEffect(() => {
+    if (active) clearProjectUnread(activeProject.id);
+  }, [active, activeProject.id, clearProjectUnread]);
+
   // Global "~" shortcut to toggle the log panel, like a game/dev console —
   // skipped while typing in the terminal or any input so `~` still types
   // normally there (e.g. `~/projects` paths).
@@ -89,106 +102,115 @@ export function Shell() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  if (!activeProject) return null;
-
-  if (needsPathSetup || showPathSetup) {
-    return (
-      <ProjectPathSetup
-        project={activeProject}
-        onBack={() => (showPathSetup ? setShowPathSetup(false) : selectProject(null))}
-        onSave={async (path) => {
-          await saveLocalPath(path);
-          setShowPathSetup(false);
-        }}
-      />
-    );
-  }
-
-  if (!projectPath) return null;
-
+  // This component stays mounted-but-hidden (display:none) for every open
+  // project tab, not just the focused one — same pattern used one level
+  // down for panels below — so a background tab's terminal/presence/poke
+  // listening keeps running. Every return path below must therefore live
+  // inside this single always-present wrapper rather than early-returning
+  // its own top-level element, or a background tab's content would render
+  // unhidden and stack on top of the focused tab's.
   return (
-    <div className={styles.shell}>
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <button className={styles.backBtn} onClick={() => selectProject(null)}>
-            ← Projects
-          </button>
-          <span className={styles.projectName}>{activeProject.name}</span>
-          <span className={styles.roleBadge}>{role}</span>
-        </div>
-
-        <div className={styles.headerRight}>
-          {!isOwner && (
-            <button className={styles.iconBtn} onClick={() => setShowPathSetup(true)} title="Change Folder">
-              <FileText size={17} />
-            </button>
-          )}
-          <button className={styles.iconBtn} onClick={() => setShowSettings(true)} title="Settings">
-            <Gear size={17} />
-          </button>
-          <button className={styles.iconBtn} onClick={() => setShowMembers(true)} title="Members">
-            <Users size={17} />
-          </button>
-          <button className={styles.iconBtn} onClick={toggleLogViewer} title="Toggle logs (~)">
-            <ListBullets size={17} />
-          </button>
-        </div>
-      </header>
-
-      <div className={styles.body}>
-        <ActivityBar items={ACTIVITY_ITEMS} activePanel={activePanel} onSelect={select} />
-
-        <main className={styles.main}>
-          <div style={{ display: activePanel === "terminal" ? "flex" : "none", height: "100%" }}>
-            <WorkspacePane title={PANEL_TITLES.terminal} onClose={close}>
-              <TerminalPanel cwd={projectPath} projectId={activeProject.id} />
-            </WorkspacePane>
-          </div>
-
-          <div style={{ display: activePanel === "hangar" ? "flex" : "none", height: "100%" }}>
-            <WorkspacePane title={PANEL_TITLES.hangar} onClose={close}>
-              <MissionHangarPanel project={activeProject} role={role} />
-            </WorkspacePane>
-          </div>
-
-          <div style={{ display: activePanel === "map" ? "flex" : "none", height: "100%" }}>
-            <WorkspacePane title={PANEL_TITLES.map} onClose={close}>
-              <Suspense fallback={null}>
-                <PresenceMap project={activeProject} active={activePanel === "map"} />
-              </Suspense>
-            </WorkspacePane>
-          </div>
-
-          <div style={{ display: activePanel === "chat" ? "flex" : "none", height: "100%" }}>
-            <WorkspacePane title={PANEL_TITLES.chat} onClose={close}>
-              <ChatPanel projectId={activeProject.id} />
-            </WorkspacePane>
-          </div>
-
-          <div style={{ display: activePanel === "docs" ? "flex" : "none", height: "100%" }}>
-            <WorkspacePane title={PANEL_TITLES.docs} onClose={close}>
-              <Suspense fallback={null}>
-                <DocsPanel projectId={activeProject.id} role={role} />
-              </Suspense>
-            </WorkspacePane>
-          </div>
-
-          {!activePanel && (
-            <div className={styles.emptyWorkspace}>
-              <div className={styles.emptyWordmark}>
-                <span className={styles.emptyCyan}>AGEN</span>
-                <span className={styles.emptyMagenta}>PIC</span>
-              </div>
-              <p className={styles.emptyHint}>Select a panel from the left to get started</p>
+    <div style={{ display: active ? "block" : "none", height: "100%", width: "100%" }}>
+      {needsPathSetup || showPathSetup ? (
+        <ProjectPathSetup
+          project={activeProject}
+          onBack={() => (showPathSetup ? setShowPathSetup(false) : closeProject(activeProject.id))}
+          onSave={async (path) => {
+            await saveLocalPath(path);
+            setShowPathSetup(false);
+          }}
+        />
+      ) : !projectPath ? null : (
+        <div className={styles.shell}>
+          <header className={styles.header}>
+            <div className={styles.headerLeft}>
+              <button className={styles.backBtn} onClick={() => closeProject(activeProject.id)}>
+                ← Projects
+              </button>
+              <span className={styles.projectName}>{activeProject.name}</span>
+              <span className={styles.roleBadge}>{role}</span>
             </div>
-          )}
-        </main>
-      </div>
 
-      {showMembers && (
-        <MembersPanel project={activeProject} isOwner={isOwner} onClose={() => setShowMembers(false)} />
+            <div className={styles.headerRight}>
+              {!isOwner && (
+                <button className={styles.iconBtn} onClick={() => setShowPathSetup(true)} title="Change Folder">
+                  <FileText size={18} />
+                </button>
+              )}
+              <StatusButton projectId={activeProject.id} iconSize={18} buttonClassName={styles.iconBtn} />
+              <button className={styles.iconBtn} onClick={() => setShowSettings(true)} title="Settings">
+                <Gear size={18} />
+              </button>
+              <button className={styles.iconBtn} onClick={() => setShowMembers(true)} title="Members">
+                <Users size={18} />
+              </button>
+              <button className={styles.iconBtn} onClick={toggleLogViewer} title="Toggle logs (~)">
+                <ListBullets size={18} />
+              </button>
+            </div>
+          </header>
+
+          <div className={styles.body}>
+            <ActivityBar
+              items={ACTIVITY_ITEMS}
+              activePanel={activePanel}
+              onSelect={select}
+              footer={<ProjectAvatarButton project={activeProject} isOwner={isOwner} />}
+            />
+
+            <main className={styles.main}>
+              <div style={{ display: activePanel === "terminal" ? "flex" : "none", height: "100%" }}>
+                <WorkspacePane title={PANEL_TITLES.terminal} onClose={close}>
+                  <TerminalPanel cwd={projectPath} projectId={activeProject.id} />
+                </WorkspacePane>
+              </div>
+
+              <div style={{ display: activePanel === "hangar" ? "flex" : "none", height: "100%" }}>
+                <WorkspacePane title={PANEL_TITLES.hangar} onClose={close}>
+                  <MissionHangarPanel project={activeProject} role={role} />
+                </WorkspacePane>
+              </div>
+
+              <div style={{ display: activePanel === "map" ? "flex" : "none", height: "100%" }}>
+                <WorkspacePane title={PANEL_TITLES.map} onClose={close}>
+                  <Suspense fallback={null}>
+                    <PresenceMap project={activeProject} active={activePanel === "map"} />
+                  </Suspense>
+                </WorkspacePane>
+              </div>
+
+              <div style={{ display: activePanel === "chat" ? "flex" : "none", height: "100%" }}>
+                <WorkspacePane title={PANEL_TITLES.chat} onClose={close}>
+                  <ChatPanel projectId={activeProject.id} />
+                </WorkspacePane>
+              </div>
+
+              <div style={{ display: activePanel === "docs" ? "flex" : "none", height: "100%" }}>
+                <WorkspacePane title={PANEL_TITLES.docs} onClose={close}>
+                  <Suspense fallback={null}>
+                    <DocsPanel projectId={activeProject.id} role={role} />
+                  </Suspense>
+                </WorkspacePane>
+              </div>
+
+              {!activePanel && (
+                <div className={styles.emptyWorkspace}>
+                  <div className={styles.emptyWordmark}>
+                    <span className={styles.emptyCyan}>AGEN</span>
+                    <span className={styles.emptyMagenta}>PIC</span>
+                  </div>
+                  <p className={styles.emptyHint}>Select a panel from the left to get started</p>
+                </div>
+              )}
+            </main>
+          </div>
+
+          {showMembers && (
+            <MembersPanel project={activeProject} isOwner={isOwner} onClose={() => setShowMembers(false)} />
+          )}
+          {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+        </div>
       )}
-      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
     </div>
   );
 }

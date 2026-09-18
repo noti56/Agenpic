@@ -1,13 +1,23 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AgenpicClient } from "@agenpic/pocketbase-client";
+import { AgenpicClient, type MessageRecord, type RecordModel } from "@agenpic/pocketbase-client";
 
 export function messagesQueryKey(projectId: string | undefined) {
   return ["messages", projectId];
 }
 
-export function useMessages(client: AgenpicClient, projectId: string | undefined) {
+export function useMessages(
+  client: AgenpicClient,
+  projectId: string | undefined,
+  /** Fired only for realtime "create" events (never the initial fetch, never updates like flagging) — the hook to notification/sound UI lives on top of this, not inside it, since this package stays platform-agnostic. */
+  onCreate?: (message: MessageRecord & RecordModel) => void,
+) {
   const qc = useQueryClient();
+  // Kept current on every render without going in the effect's deps — the
+  // subscription itself must not tear down and reconnect just because the
+  // caller passed a fresh inline callback (it would on every render).
+  const onCreateRef = useRef(onCreate);
+  onCreateRef.current = onCreate;
   const query = useQuery({
     queryKey: messagesQueryKey(projectId),
     queryFn: () =>
@@ -30,6 +40,7 @@ export function useMessages(client: AgenpicClient, projectId: string | undefined
         (e) => {
           if (e.record.project !== projectId) return;
           qc.invalidateQueries({ queryKey: messagesQueryKey(projectId) });
+          if (e.action === "create") onCreateRef.current?.(e.record);
         },
         { filter: `project = "${projectId}"`, expand: "user" },
       )

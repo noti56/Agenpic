@@ -1,0 +1,25 @@
+.wrap {
+  position: relative;
+}
+
+.active {
+  color: var(--agp-cyan) !important;
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  z-index: 10;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

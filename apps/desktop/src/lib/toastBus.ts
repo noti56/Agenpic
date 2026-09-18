@@ -1,4 +1,12 @@
-export type ToastKind = "info" | "success" | "warning" | "ticket-moved" | "teammate-joined" | "message-flagged";
+export type ToastKind =
+  | "info"
+  | "success"
+  | "warning"
+  | "ticket-moved"
+  | "teammate-joined"
+  | "message-flagged"
+  | "poke"
+  | "message";
 
 export interface ToastEvent {
   kind: ToastKind;

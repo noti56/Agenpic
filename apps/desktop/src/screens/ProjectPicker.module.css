@@ -2,30 +2,49 @@
   height: 100vh;
   width: 100vw;
   background: var(--agp-bg-void);
-  padding: 32px;
+  padding: 40px;
   box-sizing: border-box;
   overflow-y: auto;
 }
 
+/* Shown inside the tab bar's "+" modal (ProjectTabBar.module.css's
+   .pickerModal already constrains that box's size) instead of as a
+   page root — 100vh/100vw here would blow out the modal. */
+.wrapEmbedded {
+  height: auto;
+  width: 100%;
+  max-height: 80vh;
+  padding: 28px;
+}
+
 .header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 28px;
+  margin-bottom: 32px;
 }
 
 .title {
   margin: 0;
   font-family: var(--agp-font-mono);
-  font-size: 20px;
-  letter-spacing: 0.08em;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   color: var(--agp-cyan);
+  text-shadow: var(--agp-glow-cyan);
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--agp-text-faint);
 }
 
 .headerRight {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding-top: 2px;
 }
 
 .userEmail {
@@ -35,55 +54,144 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 16px;
 }
 
 .card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   padding: 18px;
   cursor: pointer;
-  transition: border-color var(--agp-transition-fast), box-shadow var(--agp-transition-fast);
+  transition: border-color var(--agp-transition-fast), box-shadow var(--agp-transition-fast),
+    transform var(--agp-transition-fast);
 }
 
 .card:hover {
   border-color: var(--agp-cyan-dim);
   box-shadow: var(--agp-glow-cyan);
+  transform: translateY(-1px);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.thumb {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--agp-radius-md);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--agp-border-soft);
+}
+
+.thumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.thumbInitial {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--agp-text);
+}
+
+.cardTitleBlock {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .cardName {
   font-weight: 600;
+  font-size: 14px;
   color: var(--agp-text);
-  margin-bottom: 4px;
-}
-
-.cardPath {
-  font-family: var(--agp-font-mono);
-  font-size: 11px;
-  color: var(--agp-text-faint);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.roleBadge {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--agp-text-faint);
+  border: 1px solid var(--agp-border);
+  border-radius: 999px;
+  padding: 2px 7px;
+}
+
+.roleBadgeOwner {
+  color: var(--agp-magenta);
+  border-color: var(--agp-magenta-dim);
+}
+
+.cardPath {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-family: var(--agp-font-mono);
+  font-size: 11px;
+  color: var(--agp-text-faint);
+}
+
+.cardPathText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--agp-text-faint);
+}
+
 .addCard {
-  min-height: 90px;
+  min-height: 108px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   border: 1px dashed var(--agp-border);
   border-radius: var(--agp-radius-lg);
   background: transparent;
   color: var(--agp-text-dim);
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: border-color var(--agp-transition-fast), color var(--agp-transition-fast);
+  transition: border-color var(--agp-transition-fast), color var(--agp-transition-fast),
+    background var(--agp-transition-fast);
 }
 
 .addCard:hover {
   border-color: var(--agp-cyan-dim);
   color: var(--agp-cyan);
+  background: var(--agp-bg-raised);
 }
 
 .createCard {
   grid-column: span 2;
-  padding: 18px;
+  padding: 20px;
 }
 
 .form {

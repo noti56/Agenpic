@@ -21,6 +21,8 @@ export interface AvatarInput {
   name: string;
   ownerLabel?: string;
   pathLabel?: string;
+  /** Free-text, Slack-style status — PocketBase-backed (see useProjectStatuses), set via the header's status button or the CLI's `status` command. */
+  statusLabel?: string;
   /** Proximity-connected (voice link) or the local user — both render the glow ring. */
   connected: boolean;
   isSelf: boolean;
@@ -28,6 +30,10 @@ export interface AvatarInput {
   accent?: number;
   /** An agent standing on one of its owner's dock pads, rather than loose on the floor. */
   docked?: boolean;
+  /** True only for other human peers — clicking their avatar sends a poke. Never true for self or agents. */
+  pokeable?: boolean;
+  /** The peer's userId, needed to target a poke — only set alongside `pokeable`. */
+  peerUserId?: string;
 }
 
 interface AvatarEntity {
@@ -40,6 +46,10 @@ interface AvatarEntity {
   nameText: Phaser.GameObjects.Text;
   ownerText: Phaser.GameObjects.Text;
   pathText: Phaser.GameObjects.Text;
+  statusText: Phaser.GameObjects.Text;
+  pokeHint: Phaser.GameObjects.Text;
+  /** Mirrors AvatarInput.peerUserId, kept current by updateAvatarEntity — read by the pointerdown listener below at click time. */
+  peerUserId?: string;
   ringTween?: Phaser.Tweens.Tween;
   lastX: number;
   lastY: number;
@@ -144,6 +154,7 @@ function cssColor(color: number): string {
 export class OfficeScene extends Phaser.Scene {
   private avatars = new Map<string, AvatarEntity>();
   private moveHandler?: (x: number, y: number) => void;
+  private pokeHandler?: (toUserId: string) => void;
   private ready = false;
   private pendingSync?: AvatarInput[];
   private pendingLayout?: OfficeLayout;
@@ -171,6 +182,9 @@ export class OfficeScene extends Phaser.Scene {
 
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       if (!this.layout) return;
+      // A click that landed on an interactive object (a pokeable avatar)
+      // pokes rather than moves — see createAvatarEntity's own pointerdown.
+      if (this.input.hitTestPointer(pointer).length > 0) return;
       const x = Phaser.Math.Clamp(pointer.worldX, 20, this.layout.worldWidth - 20);
       const y = Phaser.Math.Clamp(pointer.worldY, 20, this.layout.worldHeight - 20);
       this.moveHandler?.(x, y);
@@ -200,6 +214,10 @@ export class OfficeScene extends Phaser.Scene {
 
   setMoveHandler(cb: (x: number, y: number) => void) {
     this.moveHandler = cb;
+  }
+
+  setPokeHandler(cb: (toUserId: string) => void) {
+    this.pokeHandler = cb;
   }
 
   /**
@@ -979,10 +997,19 @@ export class OfficeScene extends Phaser.Scene {
     const pathText = this.add
       .text(0, 35, "", { ...TEXT_STYLE_BASE, fontSize: "9px", color: "#ff2fd0" })
       .setOrigin(0.5, 0);
+    // Dimmer + italic so it reads as flavor text rather than another data
+    // field competing with owner/path — same vocabulary as a Slack status.
+    const statusText = this.add
+      .text(0, 46, "", { ...TEXT_STYLE_BASE, fontSize: "9px", color: "#8a93ab", fontStyle: "italic" })
+      .setOrigin(0.5, 0);
+    const pokeHint = this.add
+      .text(0, -58, "👋 poke", { ...TEXT_STYLE_BASE, fontSize: "9px", color: "#ffe38a", fontStyle: "bold" })
+      .setOrigin(0.5, 1)
+      .setVisible(false);
 
-    container.add([shadow, pool, ring, sprite, antenna, nameText, ownerText, pathText]);
+    container.add([shadow, pool, ring, sprite, antenna, nameText, ownerText, pathText, statusText, pokeHint]);
 
-    return {
+    const entity: AvatarEntity = {
       container,
       shadow,
       pool,
@@ -992,9 +1019,23 @@ export class OfficeScene extends Phaser.Scene {
       nameText,
       ownerText,
       pathText,
+      statusText,
+      pokeHint,
       lastX: input.x,
       lastY: input.y,
     };
+
+    // Clicking a pokeable avatar pokes rather than moves — the scene-level
+    // click-to-move handler bails out via hitTestPointer when this fires.
+    // `entity` is captured by reference, so peerUserId always reads the
+    // latest value updateAvatarEntity assigned, not the one at creation time.
+    sprite.on("pointerover", () => entity.pokeHint.setVisible(!!entity.peerUserId));
+    sprite.on("pointerout", () => entity.pokeHint.setVisible(false));
+    sprite.on("pointerdown", () => {
+      if (entity.peerUserId) this.pokeHandler?.(entity.peerUserId);
+    });
+
+    return entity;
   }
 
   private updateAvatarEntity(entity: AvatarEntity, input: AvatarInput) {
@@ -1046,5 +1087,17 @@ export class OfficeScene extends Phaser.Scene {
       .setText(input.pathLabel ?? "")
       .setY(input.ownerLabel ? 35 : 24)
       .setVisible(!!input.pathLabel);
+    entity.statusText
+      .setText(input.statusLabel ? `"${input.statusLabel}"` : "")
+      .setY(24 + (input.ownerLabel ? 11 : 0) + (input.pathLabel ? 11 : 0))
+      .setVisible(!!input.statusLabel);
+
+    entity.peerUserId = input.pokeable ? input.peerUserId : undefined;
+    if (input.pokeable && !entity.sprite.input) {
+      entity.sprite.setInteractive({ cursor: "pointer" });
+    } else if (!input.pokeable && entity.sprite.input) {
+      entity.sprite.disableInteractive();
+      entity.pokeHint.setVisible(false);
+    }
   }
 }

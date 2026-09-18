@@ -3,6 +3,7 @@ import type {
   CommentRecord,
   DocRecord,
   MessageRecord,
+  PresenceStatusRecord,
   ProjectMemberRecord,
   ProjectRecord,
   TicketRecord,
@@ -42,6 +43,10 @@ export class AgenpicClient {
 
   get docs() {
     return this.pb.collection<DocRecord & RecordModel>("docs");
+  }
+
+  get presenceStatus() {
+    return this.pb.collection<PresenceStatusRecord & RecordModel>("presence_status");
   }
 
   /** Accepts any record-shaped object that carries `collectionId`/`collectionName` at runtime (all records returned by this client do), matching the underlying SDK's loose signature. */
@@ -93,6 +98,7 @@ export type {
   CommentRecord,
   DocRecord,
   MessageRecord,
+  PresenceStatusRecord,
   ProjectMemberRecord,
   ProjectRecord,
   TicketRecord,

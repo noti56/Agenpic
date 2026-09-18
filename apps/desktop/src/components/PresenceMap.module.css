@@ -23,6 +23,7 @@
   top: 12px;
   left: 12px;
   display: flex;
+  align-items: center;
   gap: 8px;
   z-index: 5;
 }
